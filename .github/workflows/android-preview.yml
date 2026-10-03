@@ -36,13 +36,6 @@ jobs:
           version: 9.12.0
           run_install: false
 
-      - name: Setup Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: gradle
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -53,6 +46,15 @@ jobs:
         env:
           CI: '1'
         run: pnpm exec expo prebuild --platform android --clean
+
+      # Important: setup-java must run after expo prebuild if Gradle caching is enabled,
+      # because prebuild is what creates android/*.gradle and gradle-wrapper.properties.
+      # Cache is intentionally disabled here for maximum CI reliability.
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Build release APK locally
         working-directory: android
