@@ -1,11 +1,14 @@
 import "../global.css";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { I18nManager } from "react-native";
+import {
+  I18nManager,
+  View,
+  Text,
+  useColorScheme as useSystemColorScheme,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { View, Text } from "react-native";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AllergyProvider } from "@/lib/allergy-store";
 
 try {
@@ -33,7 +36,9 @@ export function ErrorBoundary({ error }: { error: Error }) {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const systemColorScheme = useSystemColorScheme();
+  const colorScheme = systemColorScheme ?? "light";
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

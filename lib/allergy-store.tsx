@@ -52,32 +52,61 @@ const emptyProfile: Profile = {
 };
 const StoreContext = createContext<StoreValue | null>(null);
 
+function normalizeRecords(value: unknown): AllergyRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is AllergyRecord => {
+    if (!item || typeof item !== "object") return false;
+    const record = item as Partial<AllergyRecord>;
+    return typeof record.id === "string" && typeof record.name === "string";
+  });
+}
+
 export function AllergyProvider({ children }: { children: React.ReactNode }) {
   const [records, setRecords] = useState<AllergyRecord[]>([]);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as {
-          records?: AllergyRecord[];
-          profile?: Profile;
-        };
-        setRecords(parsed.records ?? []);
-        setProfile({ ...emptyProfile, ...(parsed.profile ?? {}) });
+        if (!raw || !isMounted) return;
+
+        try {
+          const parsed = JSON.parse(raw) as {
+            records?: unknown;
+            profile?: Partial<Profile>;
+          };
+
+          setRecords(normalizeRecords(parsed.records));
+          setProfile({ ...emptyProfile, ...(parsed.profile ?? {}) });
+        } catch (error) {
+          console.warn("Failed to hydrate allergy store:", error);
+          setRecords([]);
+          setProfile(emptyProfile);
+        }
       })
-      .catch(() => undefined)
-      .finally(() => setHydrated(true));
+      .catch((error) => {
+        console.warn("Failed to read allergy store:", error);
+      })
+      .finally(() => {
+        if (isMounted) setHydrated(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ records, profile }),
-    ).catch(() => undefined);
+
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ records, profile })).catch(
+      (error) => {
+        console.warn("Failed to persist allergy store:", error);
+      },
+    );
   }, [hydrated, records, profile]);
 
   const value = useMemo<StoreValue>(
@@ -98,7 +127,7 @@ export function AllergyProvider({ children }: { children: React.ReactNode }) {
         setRecords((current) => current.filter((record) => record.id !== id)),
       saveProfile: (nextProfile) => setProfile(nextProfile),
       replaceData: (nextRecords, nextProfile) => {
-        setRecords(nextRecords);
+        setRecords(normalizeRecords(nextRecords));
         setProfile({ ...emptyProfile, ...nextProfile });
       },
     }),

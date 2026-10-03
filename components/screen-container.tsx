@@ -1,8 +1,6 @@
 import { View, type ViewProps } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
-import { cn } from "@/lib/utils";
-
 export interface ScreenContainerProps extends ViewProps {
   /**
    * SafeArea edges to apply. Defaults to ["top", "left", "right"].
@@ -47,21 +45,24 @@ export function ScreenContainer({
   style,
   ...props
 }: ScreenContainerProps) {
+  // Parse px-5 from className if present
+  const paddingHorizontal = className?.includes("px-5") ? 20 : 0;
+
   return (
     <View
-      className={cn(
-        "flex-1",
-        "bg-background",
-        containerClassName
-      )}
+      style={[
+        { flex: 1, backgroundColor: "#F5FAFB" },
+        style,
+      ]}
       {...props}
     >
       <SafeAreaView
         edges={edges}
-        className={cn("flex-1", safeAreaClassName)}
-        style={style}
+        style={{ flex: 1 }}
       >
-        <View className={cn("flex-1", className)}>{children}</View>
+        <View style={{ flex: 1, paddingHorizontal }}>
+          {children}
+        </View>
       </SafeAreaView>
     </View>
   );

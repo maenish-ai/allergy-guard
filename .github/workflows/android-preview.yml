@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build-android:
     name: Build Android APK
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write
@@ -25,15 +25,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.12.0
-      - name: Enable pnpm cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Typecheck
@@ -47,8 +43,11 @@ jobs:
         run: |
           eas build --platform android --profile preview --non-interactive --wait
           eas build:list --platform android --status finished --build-profile preview --git-commit-hash "$GITHUB_SHA" --limit 1 --json > build.json
-          node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync('build.json','utf8')); const url=d[0]?.artifacts?.buildUrl; if(!url) { console.error('No finished EAS build matched this GitHub commit'); process.exit(1); } console.log(url); fs.writeFileSync('build-url.txt', url);"
-          curl -L "$(cat build-url.txt)" -o allergy-guard-android.apk
+          node -e "const fs=require('fs'); const d=JSON.parse(fs.readFileSync('build.json','utf8')); const url=d[0]?.artifacts?.buildUrl; if(!url) { console.error('No finished EAS build matched'); process.exit(1); } fs.writeFileSync('build-url.txt', url);"
+          BUILD_URL=$(cat build-url.txt)
+          if [ -z "$BUILD_URL" ]; then echo "Failed to extract build URL"; exit 1; fi
+          curl -L "$BUILD_URL" -o allergy-guard-android.apk
+          if [ ! -f allergy-guard-android.apk ]; then echo "Failed to download APK"; exit 1; fi
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
