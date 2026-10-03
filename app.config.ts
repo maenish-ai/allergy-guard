@@ -17,7 +17,6 @@ const config: ExpoConfig = {
   newArchEnabled: true,
   android: {
     package: "com.mkassis37.allergyguard",
-    edgeToEdgeEnabled: true,
     adaptiveIcon: {
       backgroundColor: "#E8F4F5",
       foregroundImage: "./assets/images/android-icon-foreground.png",
