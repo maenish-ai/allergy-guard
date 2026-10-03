@@ -8,12 +8,15 @@ export type BackupProfile = {
 
 export type BackupRecord = {
   id: string;
-  kind: "medicine-allergy" | "food-allergy" | "medicine-tolerated" | "medicine";
+  kind: "medicine-allergy" | "food-allergy" | "medicine-tolerated" | "medicine" | "chronic-condition" | "surgery" | "medical-note";
   name: string;
   activeIngredient?: string;
   purpose?: string;
   symptoms?: string;
   severity?: "خفيفة" | "متوسطة" | "شديدة";
+  notes?: string;
+  eventDate?: string;
+  updatedAt?: string;
   date: string;
 };
 
@@ -39,7 +42,7 @@ function isRecord(value: unknown): value is BackupRecord {
     typeof item.id === "string" &&
     typeof item.name === "string" &&
     typeof item.date === "string" &&
-    ["medicine-allergy", "food-allergy", "medicine-tolerated", "medicine"].includes(
+    ["medicine-allergy", "food-allergy", "medicine-tolerated", "medicine", "chronic-condition", "surgery", "medical-note"].includes(
       item.kind ?? "",
     )
   );

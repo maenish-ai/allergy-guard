@@ -1,10 +1,14 @@
 import type { ExpoConfig } from "expo/config";
 
+const version = "0.5.0";
+const [major, minor, patch] = version.split(".").map(Number);
+const versionCode = major * 10000 + minor * 100 + patch;
+
 const config: ExpoConfig = {
   name: "حارس الحساسية",
   slug: "allergy-guard-android",
   owner: "malak-new",
-  version: "0.4.0",
+  version,
   extra: {
     eas: {
       projectId: "f76f024e-f713-4353-a694-f56589537c1d",
@@ -17,6 +21,8 @@ const config: ExpoConfig = {
   newArchEnabled: true,
   android: {
     package: "com.mkassis37.allergyguard",
+    versionCode,
+    edgeToEdgeEnabled: true,
     adaptiveIcon: {
       backgroundColor: "#E8F4F5",
       foregroundImage: "./assets/images/android-icon-foreground.png",

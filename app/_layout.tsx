@@ -10,6 +10,7 @@ import {
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AllergyProvider } from "@/lib/allergy-store";
+import { useGithubUpdater } from "@/hooks/use-github-updater";
 
 try {
   I18nManager.allowRTL(true);
@@ -35,6 +36,12 @@ export function ErrorBoundary({ error }: { error: Error }) {
   );
 }
 
+
+function UpdateWatcher() {
+  useGithubUpdater({ autoCheck: true });
+  return null;
+}
+
 export default function RootLayout() {
   const systemColorScheme = useSystemColorScheme();
   const colorScheme = systemColorScheme ?? "light";
@@ -43,6 +50,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AllergyProvider>
+          <UpdateWatcher />
           <Stack screenOptions={{ headerShown: false }} />
           <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
         </AllergyProvider>

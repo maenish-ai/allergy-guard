@@ -1,646 +1,157 @@
-import { useState } from "react";
-import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { router } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
-import {
-  useAllergy,
-  type RecordKind,
-  type Severity,
-} from "@/lib/allergy-store";
+import { useAllergy } from "@/lib/allergy-store";
 
-const colors = {
-  navy: "#17324D",
-  teal: "#087E8B",
-  bg: "#F5FAFB",
+const C = {
+  navy: "#183B56",
+  teal: "#0B8793",
+  tealSoft: "#E8F6F7",
+  bg: "#F4F8FA",
   card: "#FFFFFF",
-  line: "#D7E5E8",
-  muted: "#637787",
-  danger: "#B23A48",
-  dangerBg: "#FFF1F2",
-  green: "#1B8A5A",
+  line: "#D9E5EA",
+  muted: "#607484",
+  red: "#B63A49",
+  redSoft: "#FFF0F2",
+  green: "#197A55",
+  greenSoft: "#EAF7F1",
+  blue: "#3569A8",
+  blueSoft: "#EDF4FC",
 };
 
-function StatCard({
-  value,
-  label,
-  tint,
-}: {
-  value: number;
-  label: string;
-  tint: string;
-}) {
+function Stat({ value, label, tint }: { value: number; label: string; tint: string }) {
   return (
-    <View style={[styles.statCard, { borderTopColor: tint }]}>
+    <View style={styles.stat}>
       <Text style={[styles.statValue, { color: tint }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  multiline = false,
+function ActionCard({
+  title,
+  description,
+  background,
+  color,
+  onPress,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  multiline?: boolean;
+  title: string;
+  description: string;
+  background: string;
+  color: string;
+  onPress: () => void;
 }) {
   return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder="اكتب هنا"
-        placeholderTextColor="#9BAAB3"
-        style={[styles.input, multiline && styles.multiline]}
-        multiline={multiline}
-        textAlign="right"
-      />
-    </View>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.actionCard, { backgroundColor: background }, pressed && styles.pressed]}>
+      <View style={[styles.actionDot, { backgroundColor: color }]} />
+      <View style={styles.actionTextWrap}>
+        <Text style={[styles.actionTitle, { color }]}>{title}</Text>
+        <Text style={styles.actionDescription}>{description}</Text>
+      </View>
+      <Text style={[styles.arrow, { color }]}>‹</Text>
+    </Pressable>
   );
 }
 
 export default function HomeScreen() {
-  const { records, addRecord } = useAllergy();
-  const [visible, setVisible] = useState(false);
-  const [kind, setKind] = useState<RecordKind>("medicine-allergy");
-  const [name, setName] = useState("");
-  const [activeIngredient, setActiveIngredient] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [symptoms, setSymptoms] = useState("");
-  const [severity, setSeverity] = useState<Severity>("متوسطة");
+  const { patients, activePatient, records } = useAllergy();
 
-  const reset = () => {
-    setName("");
-    setActiveIngredient("");
-    setPurpose("");
-    setSymptoms("");
-    setSeverity("متوسطة");
-  };
-  const save = () => {
-    if (!name.trim()) {
-      Alert.alert("بيانات ناقصة", "اكتب اسم الطعام أو الدواء أولًا.");
-      return;
-    }
-    const allergyKind = kind === "medicine-allergy" || kind === "food-allergy";
-    addRecord({
-      kind,
-      name: name.trim(),
-      activeIngredient: kind === "food-allergy" ? "" : activeIngredient.trim(),
-      purpose: purpose.trim(),
-      symptoms: allergyKind ? symptoms.trim() : "",
-      severity: allergyKind ? severity : undefined,
-    });
-    reset();
-    setVisible(false);
-    Alert.alert("تم الحفظ", "أضيف السجل إلى دفتر الحساسية.");
-  };
-  const allergies = records.filter(
-    (record) =>
-      record.kind === "medicine-allergy" || record.kind === "food-allergy",
-  );
-  const medicines = records.filter((record) => record.kind === "medicine");
-  const tolerated = records.filter(
-    (record) => record.kind === "medicine-tolerated",
-  );
+  const allergies = records.filter((r) => r.kind === "medicine-allergy" || r.kind === "food-allergy").length;
+  const medicines = records.filter((r) => r.kind === "medicine").length;
+  const chronic = records.filter((r) => r.kind === "chronic-condition").length;
 
   return (
-    <ScreenContainer
-      containerClassName="bg-background"
-      className="px-5"
-      edges={["top", "left", "right"]}
-    >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>سجل صحي شخصي</Text>
-            <Text style={styles.title}>حارس الحساسية</Text>
-          </View>
-          <View style={styles.shield}>
-            <Text style={styles.shieldText}>✓</Text>
-          </View>
+    <ScreenContainer edges={["top", "left", "right"]} style={{ backgroundColor: C.bg }}>
+      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <Text style={styles.brand}>حارس الحساسية</Text>
+          <Text style={styles.heroTitle}>ملفك الصحي والعائلي في مكان واحد</Text>
+          <Text style={styles.heroText}>رتّب المرضى والحساسيات والأدوية والسجلات المهمة، وصدّر تقريرًا عند الحاجة.</Text>
         </View>
-        <View style={styles.alert}>
-          <Text style={styles.alertTitle}>تنبيه مهم</Text>
-          <Text style={styles.alertText}>
-            هذا التطبيق يساعدك على تنظيم معلوماتك، ولا يغني عن استشارة الطبيب أو
-            الصيدلي.
+
+        <View style={styles.currentCard}>
+          <Text style={styles.currentLabel}>المريض الحالي</Text>
+          <Text style={styles.currentName}>{activePatient?.fullName || "لم يتم اختيار مريض"}</Text>
+          <Text style={styles.currentMeta}>
+            {activePatient
+              ? `${records.length} سجل صحي${activePatient.bloodType ? ` · فصيلة الدم ${activePatient.bloodType}` : ""}`
+              : "أضف مريضًا للبدء"}
           </Text>
+          <Pressable onPress={() => router.push("/(tabs)/patients" as any)} style={styles.switchButton}>
+            <Text style={styles.switchText}>{activePatient ? "تغيير / إدارة المرضى" : "إضافة مريض"}</Text>
+          </Pressable>
         </View>
-        <View style={styles.stats}>
-          <StatCard
-            value={
-              allergies.filter((r) => r.kind === "medicine-allergy").length
-            }
-            label="حساسية دوائية"
-            tint={colors.danger}
-          />
-          <StatCard
-            value={allergies.filter((r) => r.kind === "food-allergy").length}
-            label="حساسية غذائية"
-            tint="#D78727"
-          />
-          <StatCard
-            value={medicines.length}
-            label="أدوية مسجلة"
-            tint="#3568A8"
-          />
-          <StatCard
-            value={tolerated.length}
-            label="أدوية متحملة"
-            tint={colors.green}
-          />
+
+        <View style={styles.statsRow}>
+          <Stat value={allergies} label="حساسيات" tint={C.red} />
+          <Stat value={medicines} label="أدوية" tint={C.blue} />
+          <Stat value={chronic} label="أمراض مزمنة" tint={C.green} />
         </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.primaryButton,
-            pressed && styles.pressed,
-          ]}
-          onPress={() => setVisible(true)}
-        >
-          <Text style={styles.plus}>＋</Text>
-          <Text style={styles.primaryText}>إضافة سجل جديد</Text>
-        </Pressable>
-        <Text style={styles.sectionTitle}>آخر السجلات</Text>
-        {records.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>✦</Text>
-            <Text style={styles.emptyTitle}>لا توجد سجلات بعد</Text>
-            <Text style={styles.emptyText}>
-              ابدأ بإضافة دواء، علاج، أو حساسية جديدة.
-            </Text>
-          </View>
-        ) : (
-          records.slice(0, 3).map((record) => (
-            <View style={styles.recordCard} key={record.id}>
-              <View
-                style={[
-                  styles.recordDot,
-                  {
-                    backgroundColor:
-                      record.kind === "medicine-tolerated"
-                        ? colors.green
-                        : record.kind === "medicine"
-                          ? "#3568A8"
-                          : record.kind === "food-allergy"
-                            ? "#D78727"
-                            : colors.danger,
-                  },
-                ]}
-              />
-              <View style={styles.recordBody}>
-                <Text style={styles.recordName}>{record.name}</Text>
-                <Text style={styles.recordMeta}>
-                  {record.activeIngredient ||
-                    (record.kind === "food-allergy"
-                      ? "مكوّن غذائي"
-                      : "بدون مادة فعالة مسجلة")}
-                </Text>
-              </View>
-              <Text style={styles.recordTag}>
-                {record.kind === "medicine-tolerated"
-                  ? "متحمّل"
-                  : record.kind === "food-allergy"
-                    ? "غذاء"
-                    : record.kind === "medicine"
-                      ? "علاج"
-                      : "حساسية دوائية"}
-              </Text>
-            </View>
-          ))
-        )}
-        <View style={styles.tip}>
-          <Text style={styles.tipIcon}>💡</Text>
-          <Text style={styles.tipText}>
-            احتفظ ببطاقة الطوارئ معك وشاركها مع الطبيب عند الحاجة.
-          </Text>
+
+        <Text style={styles.sectionTitle}>وصول سريع</Text>
+        <ActionCard
+          title="السجلات الصحية"
+          description="إضافة، عرض، تعديل، حذف، بحث وتصدير PDF"
+          background={C.tealSoft}
+          color={C.teal}
+          onPress={() => router.push("/(tabs)/records" as any)}
+        />
+        <ActionCard
+          title="بطاقة الطوارئ"
+          description="معلومات مهمة وسريعة للمريض المحدد"
+          background={C.redSoft}
+          color={C.red}
+          onPress={() => router.push("/(tabs)/emergency" as any)}
+        />
+        <ActionCard
+          title="المرضى وأفراد العائلة"
+          description={`${patients.length} ملف محفوظ على هذا الجهاز`}
+          background={C.greenSoft}
+          color={C.green}
+          onPress={() => router.push("/(tabs)/patients" as any)}
+        />
+        <ActionCard
+          title="التحديث والنسخ الاحتياطي"
+          description="الإصدار الحالي وخيارات التحديث"
+          background={C.blueSoft}
+          color={C.blue}
+          onPress={() => router.push("/(tabs)/settings" as any)}
+        />
+
+        <View style={styles.note}>
+          <Text style={styles.noteTitle}>خصوصية محلية أولًا</Text>
+          <Text style={styles.noteText}>البيانات محفوظة على الجهاز حاليًا. بنية التخزين أصبحت مفصولة عن الواجهات حتى نقدر نضيف مزامنة سحابية مستقبلًا بدون إعادة بناء التطبيق من الصفر.</Text>
         </View>
       </ScrollView>
-      <Modal
-        visible={visible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <Pressable onPress={() => setVisible(false)}>
-                <Text style={styles.close}>×</Text>
-              </Pressable>
-              <Text style={styles.modalTitle}>إضافة سجل جديد</Text>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.label}>نوع السجل</Text>
-              <View style={styles.segment}>
-                <Pressable
-                  onPress={() => setKind("medicine-allergy")}
-                  style={[
-                    styles.segmentItem,
-                    kind === "medicine-allergy" && styles.segmentActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      kind === "medicine-allergy" && styles.segmentTextActive,
-                    ]}
-                  >
-                    دواء سبب حساسية
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setKind("food-allergy")}
-                  style={[
-                    styles.segmentItem,
-                    kind === "food-allergy" && styles.segmentActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      kind === "food-allergy" && styles.segmentTextActive,
-                    ]}
-                  >
-                    طعام / مكوّن
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setKind("medicine")}
-                  style={[
-                    styles.segmentItem,
-                    kind === "medicine" && styles.segmentActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      kind === "medicine" && styles.segmentTextActive,
-                    ]}
-                  >
-                    دواء / علاج
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setKind("medicine-tolerated")}
-                  style={[
-                    styles.segmentItem,
-                    kind === "medicine-tolerated" && styles.segmentActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      kind === "medicine-tolerated" && styles.segmentTextActive,
-                    ]}
-                  >
-                    دواء متحمّل
-                  </Text>
-                </Pressable>
-              </View>
-              <Field
-                label={
-                  kind === "food-allergy"
-                    ? "اسم الطعام أو المكوّن"
-                    : "الاسم التجاري للدواء"
-                }
-                value={name}
-                onChange={setName}
-              />
-              {kind !== "food-allergy" && (
-                <Field
-                  label="المادة الفعالة"
-                  value={activeIngredient}
-                  onChange={setActiveIngredient}
-                />
-              )}
-              <Field label="الاستخدام" value={purpose} onChange={setPurpose} />
-              {(kind === "medicine-allergy" || kind === "food-allergy") && (
-                <>
-                  <Field
-                    label="الأعراض التي ظهرت"
-                    value={symptoms}
-                    onChange={setSymptoms}
-                    multiline
-                  />
-                  <Text style={styles.label}>شدة التفاعل</Text>
-                  <View style={styles.severityRow}>
-                    {(["خفيفة", "متوسطة", "شديدة"] as Severity[]).map(
-                      (item) => (
-                        <Pressable
-                          key={item}
-                          onPress={() => setSeverity(item)}
-                          style={[
-                            styles.severity,
-                            severity === item && {
-                              backgroundColor:
-                                item === "شديدة" ? colors.danger : colors.teal,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.severityText,
-                              severity === item && styles.whiteText,
-                            ]}
-                          >
-                            {item}
-                          </Text>
-                        </Pressable>
-                      ),
-                    )}
-                  </View>
-                </>
-              )}
-              <Pressable style={styles.saveButton} onPress={save}>
-                <Text style={styles.saveText}>حفظ السجل</Text>
-              </Pressable>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 18, paddingBottom: 28 },
-  header: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  eyebrow: {
-    color: colors.teal,
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "right",
-  },
-  title: {
-    color: colors.navy,
-    fontSize: 28,
-    fontWeight: "800",
-    textAlign: "right",
-    marginTop: 2,
-  },
-  shield: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: colors.teal,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.teal,
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  shieldText: { color: "white", fontSize: 28, fontWeight: "800" },
-  alert: {
-    backgroundColor: colors.dangerBg,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#F2CBD0",
-  },
-  alertTitle: {
-    color: colors.danger,
-    fontWeight: "800",
-    textAlign: "right",
-    fontSize: 14,
-  },
-  alertText: {
-    color: "#7D4B52",
-    textAlign: "right",
-    fontSize: 12,
-    lineHeight: 20,
-    marginTop: 3,
-  },
-  stats: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  statCard: {
-    flexGrow: 1,
-    flexBasis: "47%",
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 12,
-    borderTopWidth: 3,
-    alignItems: "center",
-    shadowColor: "#16324F",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statValue: { fontSize: 24, fontWeight: "800" },
-  statLabel: {
-    color: colors.muted,
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 3,
-    textAlign: "center",
-  },
-  primaryButton: {
-    backgroundColor: colors.teal,
-    borderRadius: 15,
-    height: 54,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    shadowColor: colors.teal,
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
-  plus: { color: "white", fontSize: 24, lineHeight: 26 },
-  primaryText: { color: "white", fontSize: 16, fontWeight: "800" },
-  sectionTitle: {
-    color: colors.navy,
-    fontSize: 18,
-    fontWeight: "800",
-    textAlign: "right",
-    marginTop: 24,
-    marginBottom: 10,
-  },
-  empty: {
-    backgroundColor: colors.card,
-    borderRadius: 18,
-    padding: 22,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  emptyIcon: { color: colors.teal, fontSize: 30 },
-  emptyTitle: {
-    color: colors.navy,
-    fontSize: 16,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  emptyText: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 5,
-    textAlign: "center",
-  },
-  recordCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    minHeight: 70,
-    padding: 13,
-    marginBottom: 8,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  recordDot: { width: 11, height: 11, borderRadius: 6, marginLeft: 11 },
-  recordBody: { flex: 1, alignItems: "flex-end" },
-  recordName: { color: colors.navy, fontSize: 14, fontWeight: "800" },
-  recordMeta: { color: colors.muted, fontSize: 11, marginTop: 3 },
-  recordTag: {
-    color: colors.muted,
-    fontSize: 11,
-    backgroundColor: colors.bg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  tip: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    backgroundColor: "#EAF5F6",
-    borderRadius: 14,
-    padding: 12,
-    marginTop: 14,
-    gap: 8,
-  },
-  tipIcon: { fontSize: 17 },
-  tipText: {
-    flex: 1,
-    color: colors.teal,
-    fontSize: 11,
-    textAlign: "right",
-    lineHeight: 18,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(12, 31, 48, 0.45)",
-  },
-  modal: {
-    maxHeight: "92%",
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    padding: 20,
-  },
-  modalHandle: {
-    width: 42,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#C0D0D5",
-    alignSelf: "center",
-    marginBottom: 14,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  modalTitle: {
-    color: colors.navy,
-    fontSize: 20,
-    fontWeight: "800",
-    textAlign: "right",
-  },
-  close: { color: colors.muted, fontSize: 28 },
-  label: {
-    color: colors.navy,
-    fontSize: 13,
-    fontWeight: "800",
-    textAlign: "right",
-    marginBottom: 7,
-    marginTop: 10,
-  },
-  segment: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 5, marginBottom: 6 },
-  segmentItem: {
-    flexGrow: 1,
-    flexBasis: "47%",
-    borderRadius: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 5,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.card,
-    alignItems: "center",
-  },
-  segmentActive: { backgroundColor: colors.teal, borderColor: colors.teal },
-  segmentText: {
-    color: colors.muted,
-    fontSize: 10,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  segmentTextActive: { color: "white" },
-  field: { marginTop: 8 },
-  fieldLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: "700",
-    textAlign: "right",
-    marginBottom: 5,
-  },
-  input: {
-    backgroundColor: colors.card,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: 11,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.navy,
-    fontSize: 13,
-    minHeight: 43,
-  },
-  multiline: { minHeight: 72, textAlignVertical: "top" },
-  severityRow: { flexDirection: "row-reverse", gap: 7 },
-  severity: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  severityText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
-  whiteText: { color: "white" },
-  saveButton: {
-    backgroundColor: colors.navy,
-    borderRadius: 13,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  saveText: { color: "white", fontSize: 15, fontWeight: "800" },
+  page: { padding: 20, paddingBottom: 34 },
+  hero: { paddingTop: 8, marginBottom: 18 },
+  brand: { color: C.teal, fontSize: 16, fontWeight: "900", textAlign: "right" },
+  heroTitle: { color: C.navy, fontSize: 30, lineHeight: 39, fontWeight: "900", textAlign: "right", marginTop: 4 },
+  heroText: { color: C.muted, fontSize: 16, lineHeight: 26, textAlign: "right", marginTop: 8 },
+  currentCard: { backgroundColor: C.navy, borderRadius: 24, padding: 20, marginBottom: 14 },
+  currentLabel: { color: "#A9DDE1", fontSize: 14, fontWeight: "800", textAlign: "right" },
+  currentName: { color: "#FFF", fontSize: 25, fontWeight: "900", textAlign: "right", marginTop: 4 },
+  currentMeta: { color: "#D7E5EA", fontSize: 15, lineHeight: 23, textAlign: "right", marginTop: 5 },
+  switchButton: { alignSelf: "flex-end", marginTop: 14, minHeight: 46, borderRadius: 14, paddingHorizontal: 16, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
+  switchText: { color: "#FFF", fontSize: 15, fontWeight: "900" },
+  statsRow: { flexDirection: "row-reverse", gap: 10, marginBottom: 22 },
+  stat: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, borderRadius: 18, padding: 14, alignItems: "center" },
+  statValue: { fontSize: 26, fontWeight: "900" },
+  statLabel: { color: C.muted, fontSize: 13, fontWeight: "800", marginTop: 2 },
+  sectionTitle: { color: C.navy, fontSize: 20, fontWeight: "900", textAlign: "right", marginBottom: 10 },
+  actionCard: { minHeight: 92, borderRadius: 20, padding: 16, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 },
+  actionDot: { width: 12, height: 12, borderRadius: 6 },
+  actionTextWrap: { flex: 1 },
+  actionTitle: { fontSize: 18, fontWeight: "900", textAlign: "right" },
+  actionDescription: { color: C.muted, fontSize: 14, lineHeight: 22, textAlign: "right", marginTop: 3 },
+  arrow: { fontSize: 34, fontWeight: "300" },
+  pressed: { opacity: 0.78 },
+  note: { backgroundColor: C.card, borderRadius: 20, borderWidth: 1, borderColor: C.line, padding: 17, marginTop: 4 },
+  noteTitle: { color: C.navy, fontSize: 17, fontWeight: "900", textAlign: "right", marginBottom: 5 },
+  noteText: { color: C.muted, fontSize: 14, lineHeight: 23, textAlign: "right" },
 });

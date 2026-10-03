@@ -21,69 +21,73 @@ import {
 import { exportRecordsPdf } from "@/lib/pdf-export";
 import { exportBackup } from "@/lib/backup";
 
-const palette = {
-  navy: "#17324D",
-  teal: "#087E8B",
-  bg: "#F5FAFB",
+const C = {
+  navy: "#183B56",
+  teal: "#0B8793",
+  tealSoft: "#E8F6F7",
+  bg: "#F4F8FA",
   card: "#FFFFFF",
-  line: "#D7E5E8",
-  muted: "#637787",
-  red: "#B23A48",
-  green: "#1B8A5A",
-  amber: "#D78727",
-  blue: "#3568A8",
+  line: "#D9E5EA",
+  muted: "#607484",
+  red: "#B63A49",
+  redSoft: "#FFF0F2",
+  green: "#197A55",
+  amber: "#B86A15",
+  blue: "#3569A8",
+  purple: "#6F55A3",
 };
 
-const filters: Array<{ key: "all" | RecordKind; label: string }> = [
-  { key: "all", label: "الكل" },
-  { key: "medicine", label: "الأدوية" },
-  { key: "medicine-allergy", label: "حساسية دوائية" },
-  { key: "food-allergy", label: "حساسية غذائية" },
-  { key: "medicine-tolerated", label: "أدوية متحمّلة" },
-];
+type FilterKey = "all" | RecordKind;
 
 const kindOptions: Array<{ key: RecordKind; label: string }> = [
   { key: "medicine", label: "دواء / علاج" },
   { key: "medicine-allergy", label: "حساسية دوائية" },
   { key: "food-allergy", label: "حساسية غذائية" },
   { key: "medicine-tolerated", label: "دواء متحمّل" },
+  { key: "chronic-condition", label: "مرض مزمن" },
+  { key: "surgery", label: "عملية سابقة" },
+  { key: "medical-note", label: "ملاحظة طبية" },
 ];
 
-const labelFor = (kind: RecordKind) => {
-  switch (kind) {
-    case "medicine":
-      return "دواء / علاج";
-    case "medicine-tolerated":
-      return "دواء متحمّل";
-    case "food-allergy":
-      return "حساسية غذائية";
-    case "medicine-allergy":
-      return "حساسية دوائية";
-  }
-};
+const filters: Array<{ key: FilterKey; label: string }> = [
+  { key: "all", label: "الكل" },
+  ...kindOptions,
+];
 
-const colorFor = (kind: RecordKind) => {
+function labelFor(kind: RecordKind) {
+  return kindOptions.find((item) => item.key === kind)?.label ?? "سجل صحي";
+}
+
+function colorFor(kind: RecordKind) {
   switch (kind) {
-    case "medicine":
-      return palette.blue;
-    case "medicine-tolerated":
-      return palette.green;
-    case "food-allergy":
-      return palette.amber;
     case "medicine-allergy":
-      return palette.red;
+      return C.red;
+    case "food-allergy":
+      return C.amber;
+    case "medicine-tolerated":
+      return C.green;
+    case "medicine":
+      return C.blue;
+    case "chronic-condition":
+      return C.purple;
+    case "surgery":
+      return "#7D5A50";
+    case "medical-note":
+      return C.teal;
   }
-};
+}
 
 function Field({
   label,
   value,
   onChange,
+  placeholder = "اكتب هنا",
   multiline = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
   multiline?: boolean;
 }) {
   return (
@@ -92,8 +96,8 @@ function Field({
       <TextInput
         value={value}
         onChangeText={onChange}
-        placeholder="اكتب هنا"
-        placeholderTextColor="#9BAAB3"
+        placeholder={placeholder}
+        placeholderTextColor="#98A7B1"
         style={[styles.input, multiline && styles.multiline]}
         multiline={multiline}
         textAlign="right"
@@ -103,8 +107,18 @@ function Field({
 }
 
 export default function RecordsScreen() {
-  const { records, profile, addRecord, updateRecord, deleteRecord } = useAllergy();
-  const [filter, setFilter] = useState<"all" | RecordKind>("all");
+  const {
+    patients,
+    activePatient,
+    records,
+    profile,
+    selectPatient,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+  } = useAllergy();
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [query, setQuery] = useState("");
   const [viewRecord, setViewRecord] = useState<AllergyRecord | null>(null);
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -114,15 +128,26 @@ export default function RecordsScreen() {
   const [purpose, setPurpose] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [severity, setSeverity] = useState<Severity>("متوسطة");
+  const [notes, setNotes] = useState("");
+  const [eventDate, setEventDate] = useState("");
   const [exporting, setExporting] = useState<"pdf" | "csv" | null>(null);
 
-  const shown = useMemo(
-    () =>
-      filter === "all"
-        ? records
-        : records.filter((item) => item.kind === filter),
-    [filter, records],
-  );
+  const shown = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("ar");
+    return records.filter((item) => {
+      if (filter !== "all" && item.kind !== filter) return false;
+      if (!normalizedQuery) return true;
+      return [
+        item.name,
+        item.activeIngredient,
+        item.purpose,
+        item.symptoms,
+        item.notes,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLocaleLowerCase("ar").includes(normalizedQuery));
+    });
+  }, [filter, query, records]);
 
   const resetDraft = () => {
     setKind("medicine");
@@ -131,10 +156,16 @@ export default function RecordsScreen() {
     setPurpose("");
     setSymptoms("");
     setSeverity("متوسطة");
+    setNotes("");
+    setEventDate("");
     setEditingId(null);
   };
 
   const openAdd = () => {
+    if (!activePatient) {
+      Alert.alert("أضف مريضًا أولًا", "اذهب إلى تبويب المرضى وأنشئ ملف مريض، ثم أضف السجلات الصحية.");
+      return;
+    }
     resetDraft();
     setEditorVisible(true);
   };
@@ -147,41 +178,40 @@ export default function RecordsScreen() {
     setPurpose(record.purpose ?? "");
     setSymptoms(record.symptoms ?? "");
     setSeverity(record.severity ?? "متوسطة");
+    setNotes(record.notes ?? "");
+    setEventDate(record.eventDate ?? "");
     setViewRecord(null);
     setEditorVisible(true);
   };
 
   const save = () => {
+    if (!activePatient) return;
     if (!name.trim()) {
-      Alert.alert("بيانات ناقصة", "أدخل اسم الدواء أو المادة المسببة للحساسية.");
+      Alert.alert("بيانات ناقصة", "أدخل اسم السجل أولًا.");
       return;
     }
 
-    const allergyKind = kind === "medicine-allergy" || kind === "food-allergy";
+    const isAllergy = kind === "medicine-allergy" || kind === "food-allergy";
     const input = {
       kind,
       name: name.trim(),
-      activeIngredient:
-        kind === "food-allergy" ? "" : activeIngredient.trim(),
+      activeIngredient: activeIngredient.trim(),
       purpose: purpose.trim(),
-      symptoms: allergyKind ? symptoms.trim() : "",
-      severity: allergyKind ? severity : undefined,
+      symptoms: isAllergy ? symptoms.trim() : "",
+      severity: isAllergy ? severity : undefined,
+      notes: notes.trim(),
+      eventDate: eventDate.trim(),
     };
 
-    if (editingId) {
-      updateRecord(editingId, input);
-      Alert.alert("تم التعديل", "تم تحديث السجل بنجاح.");
-    } else {
-      addRecord(input);
-      Alert.alert("تمت الإضافة", "تم حفظ السجل على الجهاز.");
-    }
+    if (editingId) updateRecord(editingId, input);
+    else addRecord(input);
 
     setEditorVisible(false);
     resetDraft();
   };
 
   const remove = (record: AllergyRecord) =>
-    Alert.alert("حذف السجل؟", `سيتم حذف سجل «${record.name}» نهائيًا من الجهاز.`, [
+    Alert.alert("حذف السجل؟", `سيتم حذف «${record.name}» نهائيًا من ملف ${activePatient?.fullName || "المريض"}.`, [
       { text: "إلغاء", style: "cancel" },
       {
         text: "حذف",
@@ -194,30 +224,24 @@ export default function RecordsScreen() {
     ]);
 
   const createPdf = async () => {
-    if (exporting) return;
+    if (!activePatient || exporting) return;
     setExporting("pdf");
     try {
       await exportRecordsPdf(profile, records);
     } catch (error) {
-      Alert.alert(
-        "تعذر إنشاء PDF",
-        error instanceof Error ? error.message : "حدث خطأ غير متوقع.",
-      );
+      Alert.alert("تعذر إنشاء PDF", error instanceof Error ? error.message : "حدث خطأ غير متوقع.");
     } finally {
       setExporting(null);
     }
   };
 
   const createCsv = async () => {
-    if (exporting) return;
+    if (!activePatient || exporting) return;
     setExporting("csv");
     try {
       await exportBackup(profile, records, "csv");
     } catch (error) {
-      Alert.alert(
-        "تعذر تصدير Excel",
-        error instanceof Error ? error.message : "حدث خطأ غير متوقع.",
-      );
+      Alert.alert("تعذر تصدير Excel", error instanceof Error ? error.message : "حدث خطأ غير متوقع.");
     } finally {
       setExporting(null);
     }
@@ -226,186 +250,112 @@ export default function RecordsScreen() {
   const isAllergy = kind === "medicine-allergy" || kind === "food-allergy";
 
   return (
-    <ScreenContainer
-      className="px-5"
-      containerClassName="bg-background"
-      edges={["top", "left", "right"]}
-    >
-      <View style={styles.header}>
-        <Text style={styles.subtitle}>إضافة، عرض، تعديل، حذف وتصدير</Text>
-        <Text style={styles.title}>السجلات الصحية</Text>
-      </View>
+    <ScreenContainer edges={["top", "left", "right"]} style={{ backgroundColor: C.bg }}>
+      <View style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.kicker}>ملف صحي قابل للإدارة</Text>
+          <Text style={styles.title}>السجلات الصحية</Text>
+        </View>
 
-      <View style={styles.topActions}>
-        <Pressable
-          onPress={openAdd}
-          style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.addButtonText}>＋ إضافة سجل</Text>
-        </Pressable>
-        <Pressable
-          onPress={createPdf}
-          disabled={exporting !== null}
-          style={({ pressed }) => [
-            styles.pdfButton,
-            pressed && styles.pressed,
-            exporting !== null && styles.disabled,
-          ]}
-        >
-          {exporting === "pdf" ? (
-            <ActivityIndicator color={palette.teal} size="small" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.patientChips}>
+          {patients.length === 0 ? (
+            <View style={styles.noPatientChip}><Text style={styles.noPatientText}>أضف مريضًا من تبويب المرضى</Text></View>
           ) : (
-            <Text style={styles.pdfButtonText}>PDF</Text>
+            patients.map((patient) => {
+              const active = patient.id === activePatient?.id;
+              return (
+                <Pressable key={patient.id} onPress={() => selectPatient(patient.id)} style={[styles.patientChip, active && styles.patientChipActive]}>
+                  <Text style={[styles.patientChipText, active && styles.patientChipTextActive]}>{patient.fullName || "مريض"}</Text>
+                </Pressable>
+              );
+            })
           )}
-        </Pressable>
-        <Pressable
-          onPress={createCsv}
-          disabled={exporting !== null}
-          style={({ pressed }) => [
-            styles.pdfButton,
-            pressed && styles.pressed,
-            exporting !== null && styles.disabled,
-          ]}
-        >
-          {exporting === "csv" ? (
-            <ActivityIndicator color={palette.teal} size="small" />
-          ) : (
-            <Text style={styles.pdfButtonText}>Excel</Text>
-          )}
-        </Pressable>
-      </View>
+        </ScrollView>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filters}
-      >
-        {filters.map((item) => (
-          <Pressable
-            key={item.key}
-            onPress={() => setFilter(item.key)}
-            style={[styles.filter, filter === item.key && styles.filterActive]}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                filter === item.key && styles.filterTextActive,
-              ]}
-            >
-              {item.label}
-            </Text>
+        <View style={styles.topActions}>
+          <Pressable onPress={openAdd} style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
+            <Text style={styles.addButtonText}>＋ إضافة سجل</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+          <Pressable onPress={createPdf} disabled={!activePatient || exporting !== null} style={({ pressed }) => [styles.exportButton, pressed && styles.pressed, (!activePatient || exporting !== null) && styles.disabled]}>
+            {exporting === "pdf" ? <ActivityIndicator color={C.teal} size="small" /> : <Text style={styles.exportText}>PDF</Text>}
+          </Pressable>
+          <Pressable onPress={createCsv} disabled={!activePatient || exporting !== null} style={({ pressed }) => [styles.exportButton, pressed && styles.pressed, (!activePatient || exporting !== null) && styles.disabled]}>
+            {exporting === "csv" ? <ActivityIndicator color={C.teal} size="small" /> : <Text style={styles.exportText}>Excel</Text>}
+          </Pressable>
+        </View>
 
-      <FlatList
-        data={shown}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={shown.length === 0 ? styles.emptyList : styles.list}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={[styles.kindDot, { backgroundColor: colorFor(item.kind) }]} />
-            <View style={styles.body}>
-              <View style={styles.nameRow}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.kind}>{labelFor(item.kind)}</Text>
-              </View>
-              {item.activeIngredient ? (
-                <Text style={styles.detail}>المادة الفعالة: {item.activeIngredient}</Text>
-              ) : null}
-              {item.purpose ? (
-                <Text style={styles.detail}>الاستخدام: {item.purpose}</Text>
-              ) : null}
-              {item.symptoms ? (
-                <Text style={styles.detail} numberOfLines={2}>
-                  الأعراض: {item.symptoms}{item.severity ? ` (${item.severity})` : ""}
-                </Text>
-              ) : null}
-              <View style={styles.rowActions}>
-                <Pressable onPress={() => setViewRecord(item)} style={styles.smallAction}>
-                  <Text style={styles.viewText}>عرض</Text>
-                </Pressable>
-                <Pressable onPress={() => openEdit(item)} style={styles.smallAction}>
-                  <Text style={styles.editText}>تعديل</Text>
-                </Pressable>
-                <Pressable onPress={() => remove(item)} style={styles.smallAction}>
-                  <Text style={styles.deleteText}>حذف</Text>
-                </Pressable>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="بحث باسم الدواء أو الحساسية أو الملاحظة..."
+          placeholderTextColor="#98A7B1"
+          textAlign="right"
+          style={styles.search}
+        />
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+          {filters.map((item) => (
+            <Pressable key={item.key} onPress={() => setFilter(item.key)} style={[styles.filter, filter === item.key && styles.filterActive]}>
+              <Text style={[styles.filterText, filter === item.key && styles.filterTextActive]}>{item.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        <FlatList
+          data={shown}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={shown.length === 0 ? styles.emptyList : styles.list}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={[styles.kindBar, { backgroundColor: colorFor(item.kind) }]} />
+              <View style={styles.cardBody}>
+                <View style={styles.cardTop}>
+                  <Text style={styles.kind}>{labelFor(item.kind)}</Text>
+                  <Text style={styles.name}>{item.name}</Text>
+                </View>
+                {item.purpose ? <Text style={styles.detail}>الاستخدام: {item.purpose}</Text> : null}
+                {item.symptoms ? <Text style={styles.detail}>الأعراض: {item.symptoms}{item.severity ? ` (${item.severity})` : ""}</Text> : null}
+                {item.notes ? <Text style={styles.detail} numberOfLines={2}>ملاحظات: {item.notes}</Text> : null}
+                <View style={styles.rowActions}>
+                  <Pressable onPress={() => setViewRecord(item)} style={styles.actionButton}><Text style={styles.viewText}>عرض</Text></Pressable>
+                  <Pressable onPress={() => openEdit(item)} style={styles.actionButton}><Text style={styles.editText}>تعديل</Text></Pressable>
+                  <Pressable onPress={() => remove(item)} style={[styles.actionButton, styles.deleteAction]}><Text style={styles.deleteText}>حذف</Text></Pressable>
+                </View>
               </View>
             </View>
-          </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>⌁</Text>
-            <Text style={styles.emptyTitle}>لا توجد سجلات</Text>
-            <Text style={styles.emptyText}>اضغط «إضافة سجل» لإضافة دواء أو حساسية.</Text>
-          </View>
-        }
-      />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>{activePatient ? "لا توجد سجلات مطابقة" : "لا يوجد مريض محدد"}</Text>
+              <Text style={styles.emptyText}>{activePatient ? "اضغط «إضافة سجل» للبدء أو غيّر البحث والتصفية." : "أنشئ ملف مريض من تبويب المرضى أولًا."}</Text>
+            </View>
+          }
+        />
+      </View>
 
-      <Modal
-        visible={viewRecord !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setViewRecord(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.detailsModal}>
+      <Modal visible={viewRecord !== null} transparent animationType="fade" onRequestClose={() => setViewRecord(null)}>
+        <View style={styles.backdrop}>
+          <View style={styles.detailSheet}>
             <View style={styles.modalHeader}>
-              <Pressable onPress={() => setViewRecord(null)}>
-                <Text style={styles.close}>×</Text>
-              </Pressable>
+              <Pressable onPress={() => setViewRecord(null)} hitSlop={12}><Text style={styles.close}>×</Text></Pressable>
               <Text style={styles.modalTitle}>تفاصيل السجل</Text>
             </View>
             {viewRecord ? (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.detailBlock}>
-                  <Text style={styles.detailLabel}>النوع</Text>
-                  <Text style={styles.detailValue}>{labelFor(viewRecord.kind)}</Text>
-                </View>
-                <View style={styles.detailBlock}>
-                  <Text style={styles.detailLabel}>الاسم</Text>
-                  <Text style={styles.detailValue}>{viewRecord.name}</Text>
-                </View>
-                {viewRecord.activeIngredient ? (
-                  <View style={styles.detailBlock}>
-                    <Text style={styles.detailLabel}>المادة الفعالة</Text>
-                    <Text style={styles.detailValue}>{viewRecord.activeIngredient}</Text>
-                  </View>
-                ) : null}
-                {viewRecord.purpose ? (
-                  <View style={styles.detailBlock}>
-                    <Text style={styles.detailLabel}>الاستخدام</Text>
-                    <Text style={styles.detailValue}>{viewRecord.purpose}</Text>
-                  </View>
-                ) : null}
-                {viewRecord.symptoms ? (
-                  <View style={styles.detailBlock}>
-                    <Text style={styles.detailLabel}>الأعراض</Text>
-                    <Text style={styles.detailValue}>{viewRecord.symptoms}</Text>
-                  </View>
-                ) : null}
-                {viewRecord.severity ? (
-                  <View style={styles.detailBlock}>
-                    <Text style={styles.detailLabel}>الشدة</Text>
-                    <Text style={styles.detailValue}>{viewRecord.severity}</Text>
-                  </View>
-                ) : null}
-                <View style={styles.detailBlock}>
-                  <Text style={styles.detailLabel}>تاريخ الإضافة</Text>
-                  <Text style={styles.detailValue}>
-                    {new Date(viewRecord.date).toLocaleString("ar")}
-                  </Text>
-                </View>
-                <View style={styles.detailsActions}>
-                  <Pressable onPress={() => openEdit(viewRecord)} style={styles.detailsEditButton}>
-                    <Text style={styles.detailsEditText}>تعديل السجل</Text>
-                  </Pressable>
-                  <Pressable onPress={() => remove(viewRecord)} style={styles.detailsDeleteButton}>
-                    <Text style={styles.detailsDeleteText}>حذف</Text>
-                  </Pressable>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                <Detail label="المريض" value={activePatient?.fullName || "—"} />
+                <Detail label="النوع" value={labelFor(viewRecord.kind)} />
+                <Detail label="الاسم" value={viewRecord.name} />
+                {viewRecord.activeIngredient ? <Detail label="المادة الفعالة" value={viewRecord.activeIngredient} /> : null}
+                {viewRecord.purpose ? <Detail label="الاستخدام / الوصف" value={viewRecord.purpose} /> : null}
+                {viewRecord.symptoms ? <Detail label="الأعراض" value={viewRecord.symptoms} /> : null}
+                {viewRecord.severity ? <Detail label="الشدة" value={viewRecord.severity} /> : null}
+                {viewRecord.eventDate ? <Detail label="التاريخ المرتبط بالسجل" value={viewRecord.eventDate} /> : null}
+                {viewRecord.notes ? <Detail label="ملاحظات" value={viewRecord.notes} /> : null}
+                <Detail label="تاريخ الإضافة" value={new Date(viewRecord.date).toLocaleString("ar")} />
+                <View style={styles.modalActions}>
+                  <Pressable onPress={() => openEdit(viewRecord)} style={styles.modalEdit}><Text style={styles.modalEditText}>تعديل السجل</Text></Pressable>
+                  <Pressable onPress={() => remove(viewRecord)} style={styles.modalDelete}><Text style={styles.modalDeleteText}>حذف</Text></Pressable>
                 </View>
               </ScrollView>
             ) : null}
@@ -413,76 +363,41 @@ export default function RecordsScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={editorVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEditorVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.editorModal}>
+      <Modal visible={editorVisible} transparent animationType="slide" onRequestClose={() => setEditorVisible(false)}>
+        <View style={styles.backdrop}>
+          <View style={styles.editorSheet}>
             <View style={styles.modalHeader}>
-              <Pressable onPress={() => setEditorVisible(false)}>
-                <Text style={styles.close}>×</Text>
-              </Pressable>
-              <Text style={styles.modalTitle}>{editingId ? "تعديل السجل" : "إضافة سجل"}</Text>
+              <Pressable onPress={() => setEditorVisible(false)} hitSlop={12}><Text style={styles.close}>×</Text></Pressable>
+              <Text style={styles.modalTitle}>{editingId ? "تعديل السجل" : "إضافة سجل صحي"}</Text>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
               <Text style={styles.fieldLabel}>نوع السجل</Text>
-              <View style={styles.kindGrid}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kindOptions}>
                 {kindOptions.map((option) => (
-                  <Pressable
-                    key={option.key}
-                    onPress={() => setKind(option.key)}
-                    style={[styles.kindOption, kind === option.key && styles.kindOptionActive]}
-                  >
-                    <Text
-                      style={[
-                        styles.kindOptionText,
-                        kind === option.key && styles.kindOptionTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
+                  <Pressable key={option.key} onPress={() => setKind(option.key)} style={[styles.kindOption, kind === option.key && styles.kindOptionActive]}>
+                    <Text style={[styles.kindOptionText, kind === option.key && styles.kindOptionTextActive]}>{option.label}</Text>
                   </Pressable>
                 ))}
-              </View>
-
-              <Field
-                label={kind === "food-allergy" ? "اسم الطعام أو المكوّن" : "اسم الدواء"}
-                value={name}
-                onChange={setName}
-              />
-              {kind !== "food-allergy" ? (
-                <Field
-                  label="المادة الفعالة"
-                  value={activeIngredient}
-                  onChange={setActiveIngredient}
-                />
-              ) : null}
-              <Field label="الاستخدام / ملاحظات" value={purpose} onChange={setPurpose} multiline />
-
+              </ScrollView>
+              <Field label="الاسم *" value={name} onChange={setName} placeholder="اسم الدواء، الحساسية، المرض أو الملاحظة" />
+              {(kind === "medicine" || kind === "medicine-allergy" || kind === "medicine-tolerated") ? <Field label="المادة الفعالة" value={activeIngredient} onChange={setActiveIngredient} /> : null}
+              <Field label={kind === "medical-note" ? "العنوان / الوصف" : "الاستخدام / الوصف"} value={purpose} onChange={setPurpose} multiline />
               {isAllergy ? (
                 <>
-                  <Field label="الأعراض التي ظهرت" value={symptoms} onChange={setSymptoms} multiline />
-                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>شدة التفاعل</Text>
+                  <Field label="الأعراض" value={symptoms} onChange={setSymptoms} multiline />
+                  <Text style={styles.fieldLabel}>شدة الحساسية</Text>
                   <View style={styles.severityRow}>
                     {(["خفيفة", "متوسطة", "شديدة"] as Severity[]).map((item) => (
-                      <Pressable
-                        key={item}
-                        onPress={() => setSeverity(item)}
-                        style={[styles.severity, severity === item && styles.severityActive]}
-                      >
-                        <Text style={[styles.severityText, severity === item && styles.whiteText]}>
-                          {item}
-                        </Text>
+                      <Pressable key={item} onPress={() => setSeverity(item)} style={[styles.severityButton, severity === item && styles.severityActive]}>
+                        <Text style={[styles.severityText, severity === item && styles.severityTextActive]}>{item}</Text>
                       </Pressable>
                     ))}
                   </View>
                 </>
               ) : null}
-
-              <Pressable onPress={save} style={styles.saveButton}>
+              <Field label="تاريخ مرتبط بالسجل" value={eventDate} onChange={setEventDate} placeholder="YYYY-MM-DD (اختياري)" />
+              <Field label="ملاحظات إضافية" value={notes} onChange={setNotes} multiline />
+              <Pressable onPress={save} style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}>
                 <Text style={styles.saveText}>{editingId ? "حفظ التعديلات" : "إضافة السجل"}</Text>
               </Pressable>
             </ScrollView>
@@ -493,68 +408,87 @@ export default function RecordsScreen() {
   );
 }
 
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detailBlock}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  header: { paddingTop: 20, marginBottom: 13 },
-  title: { color: palette.navy, fontSize: 28, fontWeight: "800", textAlign: "right" },
-  subtitle: { color: palette.teal, fontSize: 13, fontWeight: "700", textAlign: "right", marginBottom: 3 },
-  topActions: { flexDirection: "row-reverse", gap: 8, marginBottom: 12 },
-  addButton: { flex: 1, minHeight: 46, backgroundColor: palette.teal, borderRadius: 13, alignItems: "center", justifyContent: "center" },
-  addButtonText: { color: "white", fontSize: 14, fontWeight: "800" },
-  pdfButton: { width: 76, minHeight: 46, backgroundColor: palette.card, borderRadius: 13, borderWidth: 1, borderColor: palette.teal, alignItems: "center", justifyContent: "center" },
-  pdfButtonText: { color: palette.teal, fontSize: 14, fontWeight: "900" },
+  page: { flex: 1, paddingHorizontal: 20 },
+  header: { paddingTop: 8, paddingBottom: 12 },
+  kicker: { color: C.teal, fontSize: 15, fontWeight: "800", textAlign: "right" },
+  title: { color: C.navy, fontSize: 31, fontWeight: "900", textAlign: "right" },
+  patientChips: { gap: 9, paddingBottom: 12, flexDirection: "row-reverse" },
+  patientChip: { minHeight: 44, borderRadius: 14, paddingHorizontal: 15, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
+  patientChipActive: { backgroundColor: C.teal, borderColor: C.teal },
+  patientChipText: { color: C.navy, fontSize: 15, fontWeight: "800" },
+  patientChipTextActive: { color: "#FFF" },
+  noPatientChip: { backgroundColor: C.redSoft, borderRadius: 14, padding: 12 },
+  noPatientText: { color: C.red, fontSize: 14, fontWeight: "800" },
+  topActions: { flexDirection: "row-reverse", gap: 9, marginBottom: 12 },
+  addButton: { flex: 1, minHeight: 54, borderRadius: 16, backgroundColor: C.teal, alignItems: "center", justifyContent: "center" },
+  addButtonText: { color: "#FFF", fontSize: 17, fontWeight: "900" },
+  exportButton: { minWidth: 74, minHeight: 54, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
+  exportText: { color: C.teal, fontSize: 15, fontWeight: "900" },
+  disabled: { opacity: 0.45 },
   pressed: { opacity: 0.78 },
-  disabled: { opacity: 0.55 },
-  filters: { flexDirection: "row-reverse", gap: 6, paddingBottom: 13 },
-  filter: { paddingHorizontal: 12, paddingVertical: 9, borderRadius: 11, backgroundColor: palette.card, borderWidth: 1, borderColor: palette.line, alignItems: "center" },
-  filterActive: { backgroundColor: palette.teal, borderColor: palette.teal },
-  filterText: { color: palette.muted, fontSize: 10, fontWeight: "700" },
-  filterTextActive: { color: "white" },
-  list: { paddingBottom: 25 },
-  emptyList: { flexGrow: 1, justifyContent: "center", paddingBottom: 30 },
-  card: { flexDirection: "row-reverse", alignItems: "flex-start", backgroundColor: palette.card, borderRadius: 16, padding: 14, marginBottom: 9, borderWidth: 1, borderColor: palette.line },
-  kindDot: { width: 10, height: 10, borderRadius: 5, marginLeft: 10, marginTop: 6 },
-  body: { flex: 1, alignItems: "flex-end" },
-  nameRow: { width: "100%", flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
-  name: { flex: 1, color: palette.navy, fontSize: 15, fontWeight: "800", textAlign: "right" },
-  kind: { color: palette.muted, fontSize: 10, backgroundColor: palette.bg, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 7, marginRight: 7 },
-  detail: { color: palette.muted, fontSize: 11, marginTop: 5, textAlign: "right" },
-  rowActions: { flexDirection: "row-reverse", gap: 7, marginTop: 12, width: "100%" },
-  smallAction: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 9, backgroundColor: palette.bg, borderWidth: 1, borderColor: palette.line },
-  viewText: { color: palette.teal, fontSize: 11, fontWeight: "800" },
-  editText: { color: palette.blue, fontSize: 11, fontWeight: "800" },
-  deleteText: { color: palette.red, fontSize: 11, fontWeight: "800" },
-  empty: { backgroundColor: palette.card, borderRadius: 18, borderWidth: 1, borderColor: palette.line, alignItems: "center", padding: 26 },
-  emptyIcon: { color: palette.teal, fontSize: 36 },
-  emptyTitle: { color: palette.navy, fontSize: 16, fontWeight: "800", marginTop: 6 },
-  emptyText: { color: palette.muted, fontSize: 12, marginTop: 5, textAlign: "center" },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(16,35,51,0.48)", justifyContent: "flex-end" },
-  editorModal: { maxHeight: "90%", backgroundColor: palette.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 28 },
-  detailsModal: { maxHeight: "82%", backgroundColor: palette.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 28 },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
-  modalTitle: { color: palette.navy, fontSize: 20, fontWeight: "800", textAlign: "right" },
-  close: { color: palette.muted, fontSize: 30, lineHeight: 32, paddingHorizontal: 4 },
-  field: { marginTop: 10 },
-  fieldLabel: { color: palette.muted, fontSize: 12, fontWeight: "700", textAlign: "right", marginBottom: 6 },
-  input: { backgroundColor: palette.card, borderColor: palette.line, borderWidth: 1, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, color: palette.navy, fontSize: 13, minHeight: 44 },
-  multiline: { minHeight: 72, textAlignVertical: "top" },
-  kindGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 7, marginBottom: 4 },
-  kindOption: { width: "48%", minHeight: 42, borderRadius: 10, borderWidth: 1, borderColor: palette.line, backgroundColor: palette.card, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
-  kindOptionActive: { backgroundColor: palette.teal, borderColor: palette.teal },
-  kindOptionText: { color: palette.muted, fontSize: 11, fontWeight: "700", textAlign: "center" },
-  kindOptionTextActive: { color: "white" },
-  severityRow: { flexDirection: "row-reverse", gap: 7 },
-  severity: { flex: 1, minHeight: 40, borderRadius: 10, backgroundColor: palette.card, borderWidth: 1, borderColor: palette.line, alignItems: "center", justifyContent: "center" },
-  severityActive: { backgroundColor: palette.teal, borderColor: palette.teal },
-  severityText: { color: palette.muted, fontSize: 11, fontWeight: "700" },
-  whiteText: { color: "white" },
-  saveButton: { marginTop: 18, minHeight: 48, borderRadius: 13, backgroundColor: palette.teal, alignItems: "center", justifyContent: "center" },
-  saveText: { color: "white", fontSize: 14, fontWeight: "800" },
-  detailBlock: { backgroundColor: palette.card, borderRadius: 12, borderWidth: 1, borderColor: palette.line, padding: 12, marginBottom: 8 },
-  detailLabel: { color: palette.muted, fontSize: 10, textAlign: "right", marginBottom: 4 },
-  detailValue: { color: palette.navy, fontSize: 14, fontWeight: "700", textAlign: "right", lineHeight: 22 },
-  detailsActions: { flexDirection: "row-reverse", gap: 8, marginTop: 10 },
-  detailsEditButton: { flex: 1, minHeight: 46, backgroundColor: palette.teal, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  detailsEditText: { color: "white", fontSize: 13, fontWeight: "800" },
-  detailsDeleteButton: { width: 82, minHeight: 46, backgroundColor: "#FFF1F2", borderRadius: 12, borderWidth: 1, borderColor: "#F2C6CC", alignItems: "center", justifyContent: "center" },
-  detailsDeleteText: { color: palette.red, fontSize: 13, fontWeight: "800" },
+  search: { minHeight: 52, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, paddingHorizontal: 15, color: C.navy, fontSize: 16, marginBottom: 10 },
+  filters: { gap: 8, paddingBottom: 12, flexDirection: "row-reverse" },
+  filter: { minHeight: 42, borderRadius: 999, paddingHorizontal: 15, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF0F3" },
+  filterActive: { backgroundColor: C.navy },
+  filterText: { color: C.muted, fontSize: 14, fontWeight: "800" },
+  filterTextActive: { color: "#FFF" },
+  list: { paddingBottom: 28 },
+  emptyList: { flexGrow: 1, paddingBottom: 28 },
+  card: { backgroundColor: C.card, borderRadius: 20, borderWidth: 1, borderColor: C.line, marginBottom: 13, overflow: "hidden", flexDirection: "row" },
+  kindBar: { width: 6 },
+  cardBody: { flex: 1, padding: 15 },
+  cardTop: { marginBottom: 6 },
+  kind: { color: C.teal, fontSize: 13, fontWeight: "800", textAlign: "right", marginBottom: 2 },
+  name: { color: C.navy, fontSize: 20, fontWeight: "900", textAlign: "right" },
+  detail: { color: C.muted, fontSize: 15, lineHeight: 23, textAlign: "right", marginTop: 3 },
+  rowActions: { flexDirection: "row-reverse", gap: 8, marginTop: 13, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line },
+  actionButton: { minHeight: 46, minWidth: 78, borderRadius: 13, backgroundColor: "#F1F6F8", paddingHorizontal: 13, alignItems: "center", justifyContent: "center" },
+  deleteAction: { backgroundColor: C.redSoft },
+  viewText: { color: C.teal, fontSize: 15, fontWeight: "900" },
+  editText: { color: C.navy, fontSize: 15, fontWeight: "900" },
+  deleteText: { color: C.red, fontSize: 15, fontWeight: "900" },
+  emptyCard: { flex: 1, marginTop: 20, backgroundColor: C.card, borderRadius: 22, borderWidth: 1, borderColor: C.line, padding: 24, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { color: C.navy, fontSize: 21, fontWeight: "900", marginBottom: 8 },
+  emptyText: { color: C.muted, fontSize: 16, lineHeight: 25, textAlign: "center" },
+  backdrop: { flex: 1, backgroundColor: "rgba(8, 28, 42, 0.46)", justifyContent: "flex-end" },
+  detailSheet: { maxHeight: "86%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  editorSheet: { maxHeight: "94%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: 1, borderBottomColor: C.line },
+  close: { color: C.muted, fontSize: 34, lineHeight: 36 },
+  modalTitle: { color: C.navy, fontSize: 21, fontWeight: "900", textAlign: "right" },
+  modalContent: { padding: 20, paddingBottom: 36 },
+  detailBlock: { backgroundColor: "#F7FAFB", borderRadius: 14, padding: 13, marginBottom: 10 },
+  detailLabel: { color: C.muted, fontSize: 13, fontWeight: "700", textAlign: "right" },
+  detailValue: { color: C.navy, fontSize: 17, fontWeight: "800", textAlign: "right", marginTop: 4, lineHeight: 25 },
+  modalActions: { flexDirection: "row-reverse", gap: 10, marginTop: 10 },
+  modalEdit: { flex: 1, minHeight: 52, borderRadius: 15, backgroundColor: C.teal, alignItems: "center", justifyContent: "center" },
+  modalEditText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  modalDelete: { minWidth: 90, minHeight: 52, borderRadius: 15, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" },
+  modalDeleteText: { color: C.red, fontSize: 16, fontWeight: "900" },
+  kindOptions: { gap: 8, paddingVertical: 10, flexDirection: "row-reverse" },
+  kindOption: { minHeight: 44, paddingHorizontal: 14, borderRadius: 13, backgroundColor: "#EFF4F6", alignItems: "center", justifyContent: "center" },
+  kindOptionActive: { backgroundColor: C.teal },
+  kindOptionText: { color: C.navy, fontSize: 14, fontWeight: "800" },
+  kindOptionTextActive: { color: "#FFF" },
+  field: { marginTop: 12 },
+  fieldLabel: { color: C.navy, fontSize: 15, fontWeight: "800", textAlign: "right", marginTop: 8, marginBottom: 7 },
+  input: { minHeight: 52, borderRadius: 14, backgroundColor: "#F8FBFC", borderWidth: 1, borderColor: C.line, paddingHorizontal: 14, color: C.navy, fontSize: 17 },
+  multiline: { minHeight: 92, paddingTop: 13, textAlignVertical: "top" },
+  severityRow: { flexDirection: "row-reverse", gap: 8, marginBottom: 4 },
+  severityButton: { flex: 1, minHeight: 46, borderRadius: 13, backgroundColor: "#EFF4F6", alignItems: "center", justifyContent: "center" },
+  severityActive: { backgroundColor: C.navy },
+  severityText: { color: C.muted, fontSize: 15, fontWeight: "800" },
+  severityTextActive: { color: "#FFF" },
+  saveButton: { minHeight: 58, backgroundColor: C.teal, borderRadius: 16, alignItems: "center", justifyContent: "center", marginTop: 22 },
+  saveText: { color: "#FFF", fontSize: 18, fontWeight: "900" },
 });

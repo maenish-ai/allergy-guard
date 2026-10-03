@@ -21,6 +21,7 @@ const MAPPING = {
   "list.bullet": "list",
   "cross.case.fill": "medical-services",
   "gearshape.fill": "settings",
+  "person.3.fill": "groups",
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",

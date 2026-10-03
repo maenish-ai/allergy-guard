@@ -8,7 +8,8 @@ import { useColors } from "@/hooks/use-colors";
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
+  const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 7);
+
   return (
     <Tabs
       screenOptions={{
@@ -16,13 +17,14 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.muted,
         tabBarButton: HapticTab,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "800" },
         tabBarStyle: {
           paddingTop: 7,
           paddingBottom: bottomPadding,
-          height: 55 + bottomPadding,
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          borderTopWidth: 0.5,
+          height: 58 + bottomPadding,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#D9E5EA",
+          borderTopWidth: 1,
         },
       }}
     >
@@ -30,36 +32,35 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "الرئيسية",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={23} name="house.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={23} name="house.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="patients"
+        options={{
+          title: "المرضى",
+          tabBarIcon: ({ color }) => <IconSymbol size={23} name="person.3.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="records"
         options={{
           title: "السجلات",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={23} name="list.bullet" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={23} name="list.bullet" color={color} />,
         }}
       />
       <Tabs.Screen
         name="emergency"
         options={{
-          title: "بطاقة الطوارئ",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={23} name="cross.case.fill" color={color} />
-          ),
+          title: "الطوارئ",
+          tabBarIcon: ({ color }) => <IconSymbol size={23} name="cross.case.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "الإعدادات",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={23} name="gearshape.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={23} name="gearshape.fill" color={color} />,
         }}
       />
     </Tabs>

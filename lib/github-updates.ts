@@ -16,7 +16,7 @@ export type GithubUpdate = {
   publishedAt?: string;
 };
 
-const REPOSITORY = "mkassis37/allergy-guard-android";
+const REPOSITORY = process.env.EXPO_PUBLIC_GITHUB_REPOSITORY || "mkassis37/allergy-guard-android";
 const API_URL = `https://api.github.com/repos/${REPOSITORY}/releases/latest`;
 const APK_NAME = "allergy-guard-android.apk";
 const OFFICIAL_HOSTS = new Set(["github.com", "objects.githubusercontent.com"]);

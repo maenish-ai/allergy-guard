@@ -27,7 +27,9 @@ export function csvRows(payload: BackupPayload) {
     "الاستخدام",
     "الأعراض",
     "الشدة",
-    "التاريخ",
+    "الملاحظات",
+    "تاريخ الحدث",
+    "تاريخ الإضافة",
   ];
   const rows = payload.records.map((record) => [
     record.kind === "medicine-allergy"
@@ -36,12 +38,20 @@ export function csvRows(payload: BackupPayload) {
         ? "طعام أو مكوّن"
         : record.kind === "medicine"
           ? "دواء / علاج"
-          : "دواء متحمّل",
+          : record.kind === "medicine-tolerated"
+            ? "دواء متحمّل"
+            : record.kind === "chronic-condition"
+              ? "مرض مزمن"
+              : record.kind === "surgery"
+                ? "عملية سابقة"
+                : "ملاحظة طبية",
     record.name,
     record.activeIngredient,
     record.purpose,
     record.symptoms,
     record.severity,
+    record.notes,
+    record.eventDate,
     record.date,
   ]);
   return (

@@ -21,6 +21,12 @@ const labelFor = (kind: RecordKind) => {
       return "دواء / علاج";
     case "medicine-tolerated":
       return "دواء متحمّل";
+    case "chronic-condition":
+      return "مرض مزمن";
+    case "surgery":
+      return "عملية سابقة";
+    case "medical-note":
+      return "ملاحظة طبية";
   }
 };
 
@@ -38,7 +44,8 @@ function recordRow(record: AllergyRecord) {
       <td>${escapeHtml(record.purpose || "—")}</td>
       <td>${escapeHtml(record.symptoms || "—")}</td>
       <td>${escapeHtml(record.severity || "—")}</td>
-      <td>${escapeHtml(displayDate)}</td>
+      <td>${escapeHtml(record.notes || "—")}</td>
+      <td>${escapeHtml(record.eventDate || displayDate)}</td>
     </tr>`;
 }
 
@@ -46,7 +53,7 @@ export function buildRecordsPdfHtml(profile: Profile, records: AllergyRecord[]) 
   const generatedAt = new Date().toLocaleString("ar");
   const rows = records.length
     ? records.map(recordRow).join("")
-    : '<tr><td colspan="7" class="empty">لا توجد سجلات محفوظة.</td></tr>';
+    : '<tr><td colspan="8" class="empty">لا توجد سجلات محفوظة.</td></tr>';
 
   return `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -78,6 +85,7 @@ export function buildRecordsPdfHtml(profile: Profile, records: AllergyRecord[]) 
     <div class="profile-grid">
       <div><div class="label">الاسم</div><div class="value">${escapeHtml(profile.fullName || "غير مسجل")}</div></div>
       <div><div class="label">الهاتف</div><div class="value">${escapeHtml(profile.phone || "غير مسجل")}</div></div>
+      <div><div class="label">فصيلة الدم</div><div class="value">${escapeHtml(profile.bloodType || "غير مسجلة")}</div></div>
       <div><div class="label">جهة اتصال الطوارئ</div><div class="value">${escapeHtml(profile.emergencyContact || "غير مسجلة")}</div></div>
       <div><div class="label">الطبيب / المنشأة</div><div class="value">${escapeHtml(profile.doctor || "غير مسجل")}</div></div>
     </div>
@@ -92,6 +100,7 @@ export function buildRecordsPdfHtml(profile: Profile, records: AllergyRecord[]) 
         <th>الاستخدام</th>
         <th>الأعراض</th>
         <th>الشدة</th>
+        <th>ملاحظات</th>
         <th>التاريخ</th>
       </tr>
     </thead>
