@@ -10,7 +10,8 @@ import React, {
 export type RecordKind =
   | "medicine-allergy"
   | "food-allergy"
-  | "medicine-tolerated";
+  | "medicine-tolerated"
+  | "medicine";
 export type Severity = "خفيفة" | "متوسطة" | "شديدة";
 
 export type AllergyRecord = {
@@ -37,6 +38,7 @@ type StoreValue = {
   profile: Profile;
   hydrated: boolean;
   addRecord: (record: Omit<AllergyRecord, "id" | "date">) => void;
+  updateRecord: (id: string, record: Omit<AllergyRecord, "id" | "date">) => void;
   deleteRecord: (id: string) => void;
   saveProfile: (profile: Profile) => void;
   replaceData: (records: AllergyRecord[], profile: Profile) => void;
@@ -123,6 +125,12 @@ export function AllergyProvider({ children }: { children: React.ReactNode }) {
           },
           ...current,
         ]),
+      updateRecord: (id, input) =>
+        setRecords((current) =>
+          current.map((record) =>
+            record.id === id ? { ...record, ...input, id: record.id, date: record.date } : record,
+          ),
+        ),
       deleteRecord: (id) =>
         setRecords((current) => current.filter((record) => record.id !== id)),
       saveProfile: (nextProfile) => setProfile(nextProfile),

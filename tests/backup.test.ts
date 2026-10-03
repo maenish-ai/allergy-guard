@@ -43,6 +43,21 @@ describe("local backup export and import", () => {
     expect(csv).toContain("المادة الفعالة");
   });
 
+  it("accepts regular medication records in backups", () => {
+    const medication = {
+      id: "2",
+      kind: "medicine" as const,
+      name: "دواء منتظم",
+      activeIngredient: "مادة",
+      purpose: "علاج منتظم",
+      date: "2026-01-02T00:00:00.000Z",
+    };
+    const payload = makeBackupPayload(profile, [...records, medication]);
+    const restored = validateBackup(JSON.parse(JSON.stringify(payload)));
+    expect(restored.records[1].kind).toBe("medicine");
+    expect(csvRows(payload)).toContain("دواء / علاج");
+  });
+
   it("encrypts and imports a backup with the correct password", async () => {
     const payload = makeBackupPayload(profile, records);
     const encrypted = await encryptBackupPayload(payload, "كلمة-مرور-قوية");

@@ -94,21 +94,24 @@ export default function HomeScreen() {
       Alert.alert("بيانات ناقصة", "اكتب اسم الطعام أو الدواء أولًا.");
       return;
     }
+    const allergyKind = kind === "medicine-allergy" || kind === "food-allergy";
     addRecord({
       kind,
       name: name.trim(),
-      activeIngredient: activeIngredient.trim(),
+      activeIngredient: kind === "food-allergy" ? "" : activeIngredient.trim(),
       purpose: purpose.trim(),
-      symptoms: symptoms.trim(),
-      severity,
+      symptoms: allergyKind ? symptoms.trim() : "",
+      severity: allergyKind ? severity : undefined,
     });
     reset();
     setVisible(false);
     Alert.alert("تم الحفظ", "أضيف السجل إلى دفتر الحساسية.");
   };
   const allergies = records.filter(
-    (record) => record.kind !== "medicine-tolerated",
+    (record) =>
+      record.kind === "medicine-allergy" || record.kind === "food-allergy",
   );
+  const medicines = records.filter((record) => record.kind === "medicine");
   const tolerated = records.filter(
     (record) => record.kind === "medicine-tolerated",
   );
@@ -153,6 +156,11 @@ export default function HomeScreen() {
             tint="#D78727"
           />
           <StatCard
+            value={medicines.length}
+            label="أدوية مسجلة"
+            tint="#3568A8"
+          />
+          <StatCard
             value={tolerated.length}
             label="أدوية متحملة"
             tint={colors.green}
@@ -174,7 +182,7 @@ export default function HomeScreen() {
             <Text style={styles.emptyIcon}>✦</Text>
             <Text style={styles.emptyTitle}>لا توجد سجلات بعد</Text>
             <Text style={styles.emptyText}>
-              ابدأ بإضافة دواء أو طعام سبب لك أعراضًا.
+              ابدأ بإضافة دواء، علاج، أو حساسية جديدة.
             </Text>
           </View>
         ) : (
@@ -187,7 +195,11 @@ export default function HomeScreen() {
                     backgroundColor:
                       record.kind === "medicine-tolerated"
                         ? colors.green
-                        : colors.danger,
+                        : record.kind === "medicine"
+                          ? "#3568A8"
+                          : record.kind === "food-allergy"
+                            ? "#D78727"
+                            : colors.danger,
                   },
                 ]}
               />
@@ -205,7 +217,9 @@ export default function HomeScreen() {
                   ? "متحمّل"
                   : record.kind === "food-allergy"
                     ? "غذاء"
-                    : "دواء"}
+                    : record.kind === "medicine"
+                      ? "علاج"
+                      : "حساسية دوائية"}
               </Text>
             </View>
           ))
@@ -268,6 +282,22 @@ export default function HomeScreen() {
                   </Text>
                 </Pressable>
                 <Pressable
+                  onPress={() => setKind("medicine")}
+                  style={[
+                    styles.segmentItem,
+                    kind === "medicine" && styles.segmentActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      kind === "medicine" && styles.segmentTextActive,
+                    ]}
+                  >
+                    دواء / علاج
+                  </Text>
+                </Pressable>
+                <Pressable
                   onPress={() => setKind("medicine-tolerated")}
                   style={[
                     styles.segmentItem,
@@ -301,7 +331,7 @@ export default function HomeScreen() {
                 />
               )}
               <Field label="الاستخدام" value={purpose} onChange={setPurpose} />
-              {kind !== "medicine-tolerated" && (
+              {(kind === "medicine-allergy" || kind === "food-allergy") && (
                 <>
                   <Field
                     label="الأعراض التي ظهرت"
@@ -404,9 +434,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 3,
   },
-  stats: { flexDirection: "row", gap: 8, marginBottom: 16 },
+  stats: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
   statCard: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: "47%",
     backgroundColor: colors.card,
     borderRadius: 14,
     padding: 12,
@@ -551,9 +582,10 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     marginTop: 10,
   },
-  segment: { flexDirection: "row-reverse", gap: 5, marginBottom: 6 },
+  segment: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 5, marginBottom: 6 },
   segmentItem: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: "47%",
     borderRadius: 10,
     paddingVertical: 11,
     paddingHorizontal: 5,

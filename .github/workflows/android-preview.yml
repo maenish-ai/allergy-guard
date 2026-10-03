@@ -37,7 +37,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Typecheck
         run: pnpm check
@@ -88,5 +88,7 @@ jobs:
           body: |
             نسخة Android أولية من حارس الحساسية.
             - APK مبني مباشرة داخل GitHub Actions بدون الحاجة إلى حساب Expo/EAS.
+            - إضافة وإدارة الأدوية والحساسيات (عرض، تعديل، حذف).
+            - تصدير جميع السجلات إلى PDF أو CSV/Excel.
             - التطبيق يحفظ السجلات محليًا على الجهاز.
             - هذه نسخة تجريبية وليست بديلًا عن استشارة الطبيب.

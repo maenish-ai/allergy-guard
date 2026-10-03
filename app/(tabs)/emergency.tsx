@@ -38,8 +38,9 @@ export default function EmergencyScreen() {
   );
   const [backupPassword, setBackupPassword] = useState("");
   const allergies = records.filter(
-    (item) => item.kind !== "medicine-tolerated",
+    (item) => item.kind === "medicine-allergy" || item.kind === "food-allergy",
   );
+  const medicines = records.filter((item) => item.kind === "medicine");
   const tolerated = records.filter(
     (item) => item.kind === "medicine-tolerated",
   );
@@ -63,6 +64,7 @@ export default function EmergencyScreen() {
           .map((r) => r.name)
           .join("، ") || "لا يوجد"
       }`,
+      `الأدوية / العلاجات المسجلة: ${medicines.map((r) => `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`).join("، ") || "لا يوجد"}`,
       `أدوية تم تحملها: ${tolerated.map((r) => `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`).join("، ") || "لا يوجد"}`,
       `جهة الطوارئ: ${profile.emergencyContact || "غير مسجل"}`,
       "هذه المعلومات سجل شخصي وليست تشخيصًا طبيًا.",
@@ -222,6 +224,15 @@ export default function EmergencyScreen() {
             {allergies
               .filter((r) => r.kind === "food-allergy")
               .map((r) => r.name)
+              .join("، ") || "لا توجد سجلات"}
+          </Text>
+          <Text style={styles.fieldHeading}>الأدوية / العلاجات المسجلة</Text>
+          <Text style={styles.foodText}>
+            {medicines
+              .map(
+                (r) =>
+                  `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`,
+              )
               .join("، ") || "لا توجد سجلات"}
           </Text>
           <Text style={styles.fieldHeading}>أدوية تم تحملها دون حساسية</Text>

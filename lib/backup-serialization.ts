@@ -34,7 +34,9 @@ export function csvRows(payload: BackupPayload) {
       ? "دواء مسبب للحساسية"
       : record.kind === "food-allergy"
         ? "طعام أو مكوّن"
-        : "دواء متحمّل",
+        : record.kind === "medicine"
+          ? "دواء / علاج"
+          : "دواء متحمّل",
     record.name,
     record.activeIngredient,
     record.purpose,
