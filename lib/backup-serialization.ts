@@ -24,7 +24,9 @@ export function csvRows(payload: BackupPayload) {
     "النوع",
     "الاسم",
     "المادة الفعالة",
-    "الاستخدام",
+    "الاستخدام / الوصف",
+    "الجرعة",
+    "التكرار",
     "الأعراض",
     "الشدة",
     "الملاحظات",
@@ -36,6 +38,8 @@ export function csvRows(payload: BackupPayload) {
       ? "دواء مسبب للحساسية"
       : record.kind === "food-allergy"
         ? "طعام أو مكوّن"
+        : record.kind === "other-allergy"
+          ? "حساسية أخرى"
         : record.kind === "medicine"
           ? "دواء / علاج"
           : record.kind === "medicine-tolerated"
@@ -48,6 +52,8 @@ export function csvRows(payload: BackupPayload) {
     record.name,
     record.activeIngredient,
     record.purpose,
+    record.dosage,
+    record.frequency,
     record.symptoms,
     record.severity,
     record.notes,

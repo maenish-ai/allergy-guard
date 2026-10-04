@@ -17,6 +17,8 @@ const labelFor = (kind: RecordKind) => {
       return "حساسية دوائية";
     case "food-allergy":
       return "حساسية غذائية";
+    case "other-allergy":
+      return "حساسية أخرى";
     case "medicine":
       return "دواء / علاج";
     case "medicine-tolerated":
@@ -42,6 +44,8 @@ function recordRow(record: AllergyRecord) {
       <td><strong>${escapeHtml(record.name)}</strong></td>
       <td>${escapeHtml(record.activeIngredient || "—")}</td>
       <td>${escapeHtml(record.purpose || "—")}</td>
+      <td>${escapeHtml(record.dosage || "—")}</td>
+      <td>${escapeHtml(record.frequency || "—")}</td>
       <td>${escapeHtml(record.symptoms || "—")}</td>
       <td>${escapeHtml(record.severity || "—")}</td>
       <td>${escapeHtml(record.notes || "—")}</td>
@@ -53,7 +57,7 @@ export function buildRecordsPdfHtml(profile: Profile, records: AllergyRecord[]) 
   const generatedAt = new Date().toLocaleString("ar");
   const rows = records.length
     ? records.map(recordRow).join("")
-    : '<tr><td colspan="8" class="empty">لا توجد سجلات محفوظة.</td></tr>';
+    : '<tr><td colspan="10" class="empty">لا توجد سجلات محفوظة.</td></tr>';
 
   return `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -97,7 +101,9 @@ export function buildRecordsPdfHtml(profile: Profile, records: AllergyRecord[]) 
         <th>النوع</th>
         <th>الاسم</th>
         <th>المادة الفعالة</th>
-        <th>الاستخدام</th>
+        <th>الاستخدام / الوصف</th>
+        <th>الجرعة</th>
+        <th>التكرار</th>
         <th>الأعراض</th>
         <th>الشدة</th>
         <th>ملاحظات</th>

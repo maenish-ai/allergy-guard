@@ -56,7 +56,7 @@ function ActionCard({
 export default function HomeScreen() {
   const { patients, activePatient, records } = useAllergy();
 
-  const allergies = records.filter((r) => r.kind === "medicine-allergy" || r.kind === "food-allergy").length;
+  const allergies = records.filter((r) => r.kind === "medicine-allergy" || r.kind === "food-allergy" || r.kind === "other-allergy").length;
   const medicines = records.filter((r) => r.kind === "medicine").length;
   const chronic = records.filter((r) => r.kind === "chronic-condition").length;
 

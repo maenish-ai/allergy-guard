@@ -38,7 +38,10 @@ export default function EmergencyScreen() {
   );
   const [backupPassword, setBackupPassword] = useState("");
   const allergies = records.filter(
-    (item) => item.kind === "medicine-allergy" || item.kind === "food-allergy",
+    (item) =>
+      item.kind === "medicine-allergy" ||
+      item.kind === "food-allergy" ||
+      item.kind === "other-allergy",
   );
   const medicines = records.filter((item) => item.kind === "medicine");
   const tolerated = records.filter(
@@ -54,7 +57,7 @@ export default function EmergencyScreen() {
           .filter((r) => r.kind === "medicine-allergy")
           .map(
             (r) =>
-              `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`,
+              `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}${r.dosage ? ` — ${r.dosage}` : ""}${r.frequency ? `، ${r.frequency}` : ""}`,
           )
           .join("، ") || "لا يوجد"
       }`,
@@ -64,8 +67,14 @@ export default function EmergencyScreen() {
           .map((r) => r.name)
           .join("، ") || "لا يوجد"
       }`,
-      `الأدوية / العلاجات المسجلة: ${medicines.map((r) => `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`).join("، ") || "لا يوجد"}`,
-      `أدوية تم تحملها: ${tolerated.map((r) => `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`).join("، ") || "لا يوجد"}`,
+      `حساسيات أخرى: ${
+        allergies
+          .filter((r) => r.kind === "other-allergy")
+          .map((r) => `${r.name}${r.severity ? ` (${r.severity})` : ""}`)
+          .join("، ") || "لا يوجد"
+      }`,
+      `الأدوية / العلاجات المسجلة: ${medicines.map((r) => `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}${r.dosage ? ` — ${r.dosage}` : ""}${r.frequency ? `، ${r.frequency}` : ""}`).join("، ") || "لا يوجد"}`,
+      `أدوية تم تحملها: ${tolerated.map((r) => `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}${r.dosage ? ` — ${r.dosage}` : ""}${r.frequency ? `، ${r.frequency}` : ""}`).join("، ") || "لا يوجد"}`,
       `جهة الطوارئ: ${profile.emergencyContact || "غير مسجل"}`,
       "هذه المعلومات سجل شخصي وليست تشخيصًا طبيًا.",
     ];
@@ -226,12 +235,19 @@ export default function EmergencyScreen() {
               .map((r) => r.name)
               .join("، ") || "لا توجد سجلات"}
           </Text>
+          <Text style={styles.fieldHeading}>حساسيات أخرى</Text>
+          <Text style={styles.foodText}>
+            {allergies
+              .filter((r) => r.kind === "other-allergy")
+              .map((r) => `${r.name}${r.severity ? ` (${r.severity})` : ""}`)
+              .join("، ") || "لا توجد سجلات"}
+          </Text>
           <Text style={styles.fieldHeading}>الأدوية / العلاجات المسجلة</Text>
           <Text style={styles.foodText}>
             {medicines
               .map(
                 (r) =>
-                  `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`,
+                  `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}${r.dosage ? ` — ${r.dosage}` : ""}${r.frequency ? `، ${r.frequency}` : ""}`,
               )
               .join("، ") || "لا توجد سجلات"}
           </Text>
@@ -240,7 +256,7 @@ export default function EmergencyScreen() {
             {tolerated
               .map(
                 (r) =>
-                  `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}`,
+                  `${r.name}${r.activeIngredient ? ` (${r.activeIngredient})` : ""}${r.dosage ? ` — ${r.dosage}` : ""}${r.frequency ? `، ${r.frequency}` : ""}`,
               )
               .join("، ") || "لا توجد سجلات"}
           </Text>

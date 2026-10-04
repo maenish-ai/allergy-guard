@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 export type RecordKind =
   | "medicine-allergy"
   | "food-allergy"
+  | "other-allergy"
   | "medicine-tolerated"
   | "medicine"
   | "chronic-condition"
@@ -18,6 +19,8 @@ export type AllergyRecord = {
   name: string;
   activeIngredient?: string;
   purpose?: string;
+  dosage?: string;
+  frequency?: string;
   symptoms?: string;
   severity?: Severity;
   notes?: string;
@@ -91,6 +94,7 @@ function normalizeKind(value: unknown): RecordKind {
   const allowed: RecordKind[] = [
     "medicine-allergy",
     "food-allergy",
+    "other-allergy",
     "medicine-tolerated",
     "medicine",
     "chronic-condition",
@@ -114,6 +118,8 @@ function normalizeRecords(value: unknown): AllergyRecord[] {
         activeIngredient:
           typeof record.activeIngredient === "string" ? record.activeIngredient : "",
         purpose: typeof record.purpose === "string" ? record.purpose : "",
+        dosage: typeof record.dosage === "string" ? record.dosage : "",
+        frequency: typeof record.frequency === "string" ? record.frequency : "",
         symptoms: typeof record.symptoms === "string" ? record.symptoms : "",
         severity:
           record.severity === "خفيفة" ||
