@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -101,6 +103,8 @@ export function DatePickerField({
   minimumDate,
   helperText,
 }: DatePickerFieldProps) {
+  const insets = useSafeAreaInsets();
+  const systemBottomClearance = Platform.OS === "android" ? Math.max(insets.bottom, 48) : Math.max(insets.bottom, 12);
   const [visible, setVisible] = useState(false);
   const [yearToolsVisible, setYearToolsVisible] = useState(false);
 
@@ -240,7 +244,7 @@ export function DatePickerField({
         animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
-        <View style={styles.backdrop}>
+        <View style={[styles.backdrop, { paddingBottom: systemBottomClearance, paddingTop: 12 }]}>
           <View style={styles.sheet}>
             <View style={styles.modalHeader}>
               <Pressable

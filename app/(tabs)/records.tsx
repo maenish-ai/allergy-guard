@@ -174,6 +174,7 @@ function Field({
 
 export default function RecordsScreen() {
   const insets = useSafeAreaInsets();
+  const systemBottomClearance = Platform.OS === "android" ? Math.max(insets.bottom, 48) : Math.max(insets.bottom, 12);
 
   const {
     patients,
@@ -639,7 +640,7 @@ export default function RecordsScreen() {
         animationType="fade"
         onRequestClose={() => setViewRecord(null)}
       >
-        <View style={styles.backdrop}>
+        <View style={[styles.backdrop, { paddingBottom: systemBottomClearance }]}>
           <View style={styles.detailSheet}>
             <View style={styles.modalHeader}>
               <Pressable onPress={() => setViewRecord(null)} hitSlop={12}>
@@ -701,7 +702,7 @@ export default function RecordsScreen() {
         onRequestClose={() => setEditorVisible(false)}
       >
         <KeyboardAvoidingView
-          style={styles.backdrop}
+          style={[styles.backdrop, { paddingBottom: systemBottomClearance }]}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={0}
         >
@@ -870,7 +871,7 @@ export default function RecordsScreen() {
               label={editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}
               onPress={save}
               busy={saving}
-              bottomPadding={Math.max(insets.bottom, 18)}
+              bottomPadding={18}
               sticky
             />
           </View>

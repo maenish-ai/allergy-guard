@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -67,6 +68,7 @@ function Input({
 
 export default function PatientsScreen() {
   const insets = useSafeAreaInsets();
+  const systemBottomClearance = Platform.OS === "android" ? Math.max(insets.bottom, 48) : Math.max(insets.bottom, 12);
   const {
     patients,
     activePatientId,
@@ -203,7 +205,7 @@ export default function PatientsScreen() {
       </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.backdrop}>
+        <View style={[styles.backdrop, { paddingBottom: systemBottomClearance }]}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
               <Pressable
@@ -256,7 +258,7 @@ export default function PatientsScreen() {
             <FormActionBar
               label={editingId ? "حفظ التعديلات" : "حفظ المريض"}
               onPress={save}
-              bottomPadding={Math.max(insets.bottom, 18)}
+              bottomPadding={18}
               sticky
             />
           </View>
