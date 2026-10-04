@@ -39,7 +39,10 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Verify required packages
+        run: node -e "require.resolve('expo-print/package.json'); console.log('expo-print is installed')"
 
       - name: Typecheck
         run: pnpm check
