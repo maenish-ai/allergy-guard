@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { DatePickerField, formatArabicDate } from "@/components/date-picker-field";
+import { FormActionBar } from "@/components/form-action-bar";
 import {
   useAllergy,
   type AllergyRecord,
@@ -171,6 +173,8 @@ function Field({
 }
 
 export default function RecordsScreen() {
+  const insets = useSafeAreaInsets();
+
   const {
     patients,
     activePatient,
@@ -703,8 +707,23 @@ export default function RecordsScreen() {
         >
           <View style={styles.editorSheet}>
             <View style={styles.modalHeader}>
-              <Pressable onPress={() => setEditorVisible(false)} hitSlop={12}>
-                <Text style={styles.close}>×</Text>
+              <Pressable
+                onPress={save}
+                disabled={saving}
+                style={({ pressed }) => [
+                  styles.headerSaveButton,
+                  { backgroundColor: selectedOption.color },
+                  pressed && styles.pressed,
+                  saving && styles.disabled,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ السجل"}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.headerSaveButtonText}>{editingId ? "حفظ" : "إضافة"}</Text>
+                )}
               </Pressable>
               <View style={styles.editorHeaderText}>
                 <Text style={styles.modalTitle}>
@@ -712,6 +731,9 @@ export default function RecordsScreen() {
                 </Text>
                 <Text style={styles.modalSubtitle}>{selectedOption.description}</Text>
               </View>
+              <Pressable onPress={() => setEditorVisible(false)} hitSlop={12}>
+                <Text style={styles.close}>×</Text>
+              </Pressable>
             </View>
 
             <ScrollView
@@ -853,33 +875,18 @@ export default function RecordsScreen() {
 
             </ScrollView>
 
-            <View style={styles.saveFooter}>
-              <Text style={styles.saveHint}>
-                {editingId
+            <FormActionBar
+              label={editingId ? "حفظ التعديلات" : "حفظ السجل"}
+              onPress={save}
+              busy={saving}
+              color={selectedOption.color}
+              bottomPadding={Math.max(insets.bottom, 18)}
+              hint={
+                editingId
                   ? `بعد تعديل ${selectedOption.label} اضغط حفظ التعديلات`
-                  : `بعد تعبئة ${selectedOption.label} اضغط حفظ السجل`}
-              </Text>
-              <Pressable
-                onPress={save}
-                disabled={saving}
-                accessibilityRole="button"
-                accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ السجل"}
-                style={({ pressed }) => [
-                  styles.saveButton,
-                  { backgroundColor: selectedOption.color },
-                  pressed && styles.pressed,
-                  saving && styles.disabled,
-                ]}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <Text style={styles.saveText}>
-                    {editingId ? "✓ حفظ التعديلات" : "✓ حفظ السجل"}
-                  </Text>
-                )}
-              </Pressable>
-            </View>
+                  : `بعد تعبئة ${selectedOption.label} اضغط حفظ السجل`
+              }
+            />
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1070,7 +1077,7 @@ const styles = StyleSheet.create({
   detailSheet: { maxHeight: "88%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
   editorSheet: { height: "95%", maxHeight: "95%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: 1, borderBottomColor: C.line, gap: 12 },
-  editorHeaderText: { flex: 1 },
+  editorHeaderText: { flex: 1, alignItems: "flex-end" },
   close: { color: C.muted, fontSize: 36, lineHeight: 38 },
   modalTitle: { color: C.navy, fontSize: 22, fontWeight: "900", textAlign: "right" },
   modalSubtitle: { color: C.muted, fontSize: 13, lineHeight: 19, textAlign: "right", marginTop: 2 },
@@ -1089,6 +1096,8 @@ const styles = StyleSheet.create({
   modalEditText: { color: "#FFF", fontSize: 17, fontWeight: "900" },
   modalDelete: { minWidth: 96, minHeight: 54, borderRadius: 15, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" },
   modalDeleteText: { color: C.red, fontSize: 17, fontWeight: "900" },
+  headerSaveButton: { minWidth: 72, minHeight: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, shadowColor: "#173A57", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   kindOptionsWrap: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 6 },
   kindOption: { minHeight: 46, paddingHorizontal: 13, borderRadius: 13, backgroundColor: "#EFF4F6", borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
   kindOptionText: { color: C.navy, fontSize: 14, fontWeight: "800" },

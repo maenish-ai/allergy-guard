@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { FormActionBar } from "@/components/form-action-bar";
 import { useAllergy } from "@/lib/allergy-store";
 import {
   exportBackup,
@@ -312,7 +313,12 @@ export default function EmergencyScreen() {
         </View>
         {editing && (
           <View style={styles.form}>
-            <Text style={styles.formTitle}>تعديل بيانات البطاقة</Text>
+            <View style={styles.formHeaderRow}>
+              <Pressable onPress={save} style={styles.inlineSaveButton} accessibilityRole="button" accessibilityLabel="حفظ التعديلات">
+                <Text style={styles.inlineSaveButtonText}>حفظ</Text>
+              </Pressable>
+              <Text style={styles.formTitle}>تعديل بيانات البطاقة</Text>
+            </View>
             <TextInput
               value={draft.fullName}
               onChangeText={(value) => setDraft({ ...draft, fullName: value })}
@@ -348,9 +354,14 @@ export default function EmergencyScreen() {
               style={styles.input}
               textAlign="right"
             />
-            <Pressable onPress={save} style={styles.save}>
-              <Text style={styles.saveText}>حفظ البيانات</Text>
-            </Pressable>
+            <FormActionBar
+              label="حفظ التعديلات"
+              onPress={save}
+              color={palette.teal}
+              topBorder={false}
+              bottomPadding={4}
+              hint="بعد تعديل بيانات بطاقة الطوارئ اضغط حفظ التعديلات."
+            />
           </View>
         )}
         <Modal
@@ -621,6 +632,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 8,
   },
+  formHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 },
+  inlineSaveButton: { minWidth: 72, minHeight: 42, borderRadius: 14, backgroundColor: palette.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
+  inlineSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   save: {
     backgroundColor: palette.navy,
     borderRadius: 11,

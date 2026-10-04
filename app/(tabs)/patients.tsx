@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Alert,
   Modal,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { DatePickerField, formatArabicDate } from "@/components/date-picker-field";
+import { FormActionBar } from "@/components/form-action-bar";
 import {
   emptyProfile,
   useAllergy,
@@ -64,6 +66,7 @@ function Input({
 }
 
 export default function PatientsScreen() {
+  const insets = useSafeAreaInsets();
   const {
     patients,
     activePatientId,
@@ -203,12 +206,20 @@ export default function PatientsScreen() {
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
+              <Pressable
+                onPress={save}
+                style={({ pressed }) => [styles.headerSaveButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={editingId ? "حفظ التعديلات" : "إضافة المريض"}
+              >
+                <Text style={styles.headerSaveButtonText}>{editingId ? "حفظ" : "إضافة"}</Text>
+              </Pressable>
+              <Text style={styles.sheetTitle}>{editingId ? "تعديل بيانات المريض" : "إضافة مريض جديد"}</Text>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={12}>
                 <Text style={styles.close}>×</Text>
               </Pressable>
-              <Text style={styles.sheetTitle}>{editingId ? "تعديل بيانات المريض" : "إضافة مريض جديد"}</Text>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.form}>
+            <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.form}>
               <Input label="الاسم الكامل *" value={draft.fullName} onChange={(v) => setDraft({ ...draft, fullName: v })} placeholder="مثال: أحمد محمد" />
               <View style={styles.twoColumns}>
                 <View style={styles.half}>
@@ -241,10 +252,14 @@ export default function PatientsScreen() {
               <Input label="جهة اتصال للطوارئ" value={draft.emergencyContact} onChange={(v) => setDraft({ ...draft, emergencyContact: v })} placeholder="الاسم + الهاتف" />
               <Input label="الطبيب / المنشأة" value={draft.doctor} onChange={(v) => setDraft({ ...draft, doctor: v })} placeholder="اختياري" />
               <Input label="ملاحظات" value={draft.notes ?? ""} onChange={(v) => setDraft({ ...draft, notes: v })} placeholder="أي معلومات إضافية" multiline />
-              <Pressable onPress={save} style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}>
-                <Text style={styles.saveButtonText}>حفظ البيانات</Text>
-              </Pressable>
             </ScrollView>
+            <FormActionBar
+              label={editingId ? "حفظ التعديلات" : "حفظ المريض"}
+              onPress={save}
+              color={C.teal}
+              bottomPadding={Math.max(insets.bottom, 18)}
+              hint={editingId ? "احفظ أي تعديل على بيانات المريض قبل الإغلاق." : "بعد تعبئة البيانات اضغط حفظ المريض لإنشاء الملف."}
+            />
           </View>
         </View>
       </Modal>
@@ -261,6 +276,8 @@ const styles = StyleSheet.create({
   primaryButton: { backgroundColor: C.teal, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   primaryButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.99 }] },
+  headerSaveButton: { minWidth: 72, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, shadowColor: C.navy, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   activeBanner: { backgroundColor: C.tealSoft, borderColor: "#C7E7EA", borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 16 },
   activeLabel: { color: C.teal, fontSize: 13, fontWeight: "800", textAlign: "right" },
   activeName: { color: C.navy, fontSize: 20, fontWeight: "900", textAlign: "right", marginTop: 3 },
@@ -288,10 +305,11 @@ const styles = StyleSheet.create({
   emptyButton: { marginTop: 18, backgroundColor: C.teal, minHeight: 52, borderRadius: 15, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },
   emptyButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   backdrop: { flex: 1, backgroundColor: "rgba(10, 30, 45, 0.45)", justifyContent: "flex-end" },
-  sheet: { maxHeight: "92%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 18 },
+  sheet: { height: "92%", maxHeight: "92%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 18, overflow: "hidden" },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.line },
   sheetTitle: { color: C.navy, fontSize: 21, fontWeight: "900", textAlign: "right" },
   close: { color: C.muted, fontSize: 34, fontWeight: "500", lineHeight: 38 },
+  formScroll: { flex: 1 },
   form: { padding: 20, paddingBottom: 34 },
   field: { marginBottom: 14 },
   label: { color: C.navy, fontSize: 15, fontWeight: "800", textAlign: "right", marginBottom: 7 },

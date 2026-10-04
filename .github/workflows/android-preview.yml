@@ -1,4 +1,4 @@
-name: Android preview APK
+name: Android build
 
 on:
   workflow_dispatch:
@@ -9,12 +9,12 @@ on:
       - "v*"
 
 concurrency:
-  group: android-preview-${{ github.ref }}
+  group: android-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-android:
-    name: Build Android APK
+    name: Build Android APK + AAB
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -49,36 +49,64 @@ jobs:
           CI: '1'
         run: pnpm exec expo prebuild --platform android --clean
 
-      # Important: setup-java must run after expo prebuild if Gradle caching is enabled,
-      # because prebuild is what creates android/*.gradle and gradle-wrapper.properties.
-      # Cache is intentionally disabled here for maximum CI reliability.
       - name: Setup Java
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Build release APK locally
+      - name: Prepare stable Android signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD_SECRET: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD_SECRET: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            KEYSTORE_PATH="$RUNNER_TEMP/allergy-guard-release.jks"
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+            echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD_SECRET" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS_SECRET" >> "$GITHUB_ENV"
+            echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
+            echo "Stable release signing is configured."
+          else
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              echo "ERROR: production/tag builds require stable signing secrets."
+              echo "Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD in GitHub Actions secrets."
+              exit 1
+            fi
+            echo "ALLOW_DEBUG_RELEASE_SIGNING=1" >> "$GITHUB_ENV"
+            echo "WARNING: preview build only; stable release signing secrets are not configured."
+          fi
+
+      - name: Configure Android signing
+        run: node scripts/configure-android-signing.js
+
+      - name: Build release APK and Play Store AAB
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          ./gradlew :app:assembleRelease :app:bundleRelease --no-daemon --stacktrace
 
-      - name: Collect APK
+      - name: Collect Android artifacts
         run: |
           APK="android/app/build/outputs/apk/release/app-release.apk"
-          if [ ! -f "$APK" ]; then
-            echo "Release APK was not found at $APK"
-            find android/app/build/outputs -type f -name '*.apk' -print || true
-            exit 1
-          fi
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+          test -f "$APK" || { echo "APK not found"; exit 1; }
+          test -f "$AAB" || { echo "AAB not found"; exit 1; }
           cp "$APK" allergy-guard-android.apk
+          cp "$AAB" allergy-guard-play-store.aab
 
-      - name: Upload APK artifact
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: allergy-guard-android-apk
-          path: allergy-guard-android.apk
+          name: allergy-guard-android
+          path: |
+            allergy-guard-android.apk
+            allergy-guard-play-store.aab
           if-no-files-found: error
 
       - name: Create GitHub release
@@ -86,12 +114,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: allergy-guard-android.apk
+          files: |
+            allergy-guard-android.apk
+            allergy-guard-play-store.aab
           body: |
-            نسخة Android أولية من حارس الحساسية.
-            - APK مبني مباشرة داخل GitHub Actions بدون الحاجة إلى حساب Expo/EAS.
-            - دعم عدة مرضى/أفراد عائلة مع اختيار المريض الحالي.
-            - إضافة وإدارة الأدوية والحساسيات والأمراض والملاحظات (عرض، تعديل، حذف).
-            - تصدير سجلات المريض الحالي إلى PDF أو CSV/Excel.
-            - التطبيق يحفظ البيانات محليًا على الجهاز ومهيأ لإضافة مزامنة سحابية مستقبلًا.
-            - هذه نسخة تجريبية وليست بديلًا عن استشارة الطبيب.
+            نسخة Android موقعة من حارس الحساسية.
+            - APK للتثبيت المباشر.
+            - AAB مخصص للرفع إلى Google Play.
+            - الحفاظ على نفس package name وversionCode تصاعدي يسمح بالتحديث فوق النسخة السابقة عند استخدام نفس مفتاح التوقيع.
+            - بيانات المرضى والسجلات المحلية تبقى محفوظة أثناء التحديث العادي للتطبيق.
