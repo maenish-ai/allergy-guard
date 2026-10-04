@@ -8,21 +8,34 @@ import {
 } from "react-native";
 
 const MONTHS_AR = [
-  "كانون الثاني",
-  "شباط",
-  "آذار",
-  "نيسان",
-  "أيار",
-  "حزيران",
-  "تموز",
-  "آب",
-  "أيلول",
-  "تشرين الأول",
-  "تشرين الثاني",
-  "كانون الأول",
+  "يناير",
+  "فبراير",
+  "مارس",
+  "أبريل",
+  "مايو",
+  "يونيو",
+  "يوليو",
+  "أغسطس",
+  "سبتمبر",
+  "أكتوبر",
+  "نوفمبر",
+  "ديسمبر",
 ];
 
-const WEEKDAYS_AR = ["أحد", "اثن", "ثلا", "أرب", "خمي", "جمع", "سبت"];
+// Saturday-first, matching the reference calendar layout.
+const WEEKDAYS_AR = ["س", "ح", "ن", "ث", "ر", "خ", "ج"];
+
+const COLORS = {
+  navy: "#173F6A",
+  teal: "#18A395",
+  tealSoft: "#E9F7F5",
+  line: "#DDE4E8",
+  muted: "#8E99A3",
+  text: "#1F2933",
+  surface: "#FFFFFF",
+  soft: "#F3F6F8",
+  danger: "#B64A57",
+};
 
 function atNoon(date: Date) {
   return new Date(
@@ -89,85 +102,32 @@ export function DatePickerField({
   helperText,
 }: DatePickerFieldProps) {
   const [visible, setVisible] = useState(false);
-  const initialDate = parseIsoDate(value) ?? atNoon(new Date());
-  const [cursor, setCursor] = useState(
-    new Date(initialDate.getFullYear(), initialDate.getMonth(), 1, 12),
-  );
-  const [pendingDate, setPendingDate] = useState<Date | null>(
-    parseIsoDate(value),
-  );
+  const [yearToolsVisible, setYearToolsVisible] = useState(false);
 
   const max = maximumDate ? atNoon(maximumDate) : null;
   const min = minimumDate ? atNoon(minimumDate) : null;
 
+  const clampDate = (date: Date) => {
+    let target = atNoon(date);
+    if (max && target > max) target = max;
+    if (min && target < min) target = min;
+    return target;
+  };
+
+  const selectedDate = parseIsoDate(value);
+  const defaultDate = clampDate(selectedDate ?? new Date());
+  const [pendingDate, setPendingDate] = useState<Date>(defaultDate);
+  const [cursor, setCursor] = useState(
+    new Date(defaultDate.getFullYear(), defaultDate.getMonth(), 1, 12),
+  );
+
   useEffect(() => {
     if (!visible) return;
-    const selected = parseIsoDate(value) ?? atNoon(new Date());
-    const safeSelected = max && selected > max ? max : min && selected < min ? min : selected;
-    setPendingDate(parseIsoDate(value) ?? safeSelected);
-    setCursor(
-      new Date(safeSelected.getFullYear(), safeSelected.getMonth(), 1, 12),
-    );
+    const next = clampDate(parseIsoDate(value) ?? new Date());
+    setPendingDate(next);
+    setCursor(new Date(next.getFullYear(), next.getMonth(), 1, 12));
+    setYearToolsVisible(false);
   }, [visible, value, max?.getTime(), min?.getTime()]);
-
-  const days = useMemo(() => {
-    const year = cursor.getFullYear();
-    const month = cursor.getMonth();
-    const firstWeekday = new Date(year, month, 1, 12).getDay();
-    const count = new Date(year, month + 1, 0, 12).getDate();
-    const previousCount = new Date(year, month, 0, 12).getDate();
-
-    return Array.from({ length: 42 }, (_, index) => {
-      const dayOffset = index - firstWeekday + 1;
-      let date: Date;
-      let outside = false;
-
-      if (dayOffset <= 0) {
-        date = new Date(year, month - 1, previousCount + dayOffset, 12);
-        outside = true;
-      } else if (dayOffset > count) {
-        date = new Date(year, month + 1, dayOffset - count, 12);
-        outside = true;
-      } else {
-        date = new Date(year, month, dayOffset, 12);
-      }
-
-      const normalized = atNoon(date);
-      const disabled = Boolean(
-        (max && normalized > max) || (min && normalized < min),
-      );
-      const selected = pendingDate
-        ? toIsoDate(normalized) === toIsoDate(pendingDate)
-        : false;
-      const today = toIsoDate(normalized) === toIsoDate(atNoon(new Date()));
-
-      return { date: normalized, outside, disabled, selected, today };
-    });
-  }, [cursor, max?.getTime(), min?.getTime(), pendingDate?.getTime()]);
-
-  const canGoNext = useMemo(() => {
-    if (!max) return true;
-    const nextMonth = new Date(
-      cursor.getFullYear(),
-      cursor.getMonth() + 1,
-      1,
-      12,
-    );
-    const maxMonth = new Date(max.getFullYear(), max.getMonth(), 1, 12);
-    return nextMonth <= maxMonth;
-  }, [cursor, max?.getTime()]);
-
-  const canGoPrevious = useMemo(() => {
-    if (!min) return true;
-    const previousMonth = new Date(
-      cursor.getFullYear(),
-      cursor.getMonth() - 1,
-      1,
-      12,
-    );
-    const minMonth = new Date(min.getFullYear(), min.getMonth(), 1, 12);
-    return previousMonth >= minMonth;
-  }, [cursor, min?.getTime()]);
 
   const clampMonth = (date: Date) => {
     let target = new Date(date.getFullYear(), date.getMonth(), 1, 12);
@@ -182,41 +142,60 @@ export function DatePickerField({
     return target;
   };
 
-  const shiftYear = (amount: number) => {
-    setCursor(
-      clampMonth(
-        new Date(cursor.getFullYear() + amount, cursor.getMonth(), 1, 12),
-      ),
-    );
-  };
+  const days = useMemo(() => {
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    // JS: Sun=0 ... Sat=6. Convert to Saturday-first index.
+    const firstWeekday = (new Date(year, month, 1, 12).getDay() + 1) % 7;
+    const count = new Date(year, month + 1, 0, 12).getDate();
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const day = index - firstWeekday + 1;
+      if (day < 1 || day > count) {
+        return { key: `blank-${index}`, date: null as Date | null, disabled: true, selected: false, today: false };
+      }
+
+      const date = atNoon(new Date(year, month, day, 12));
+      const disabled = Boolean((max && date > max) || (min && date < min));
+      const selected = toIsoDate(date) === toIsoDate(pendingDate);
+      const today = toIsoDate(date) === toIsoDate(atNoon(new Date()));
+      return { key: toIsoDate(date), date, disabled, selected, today };
+    });
+  }, [cursor, pendingDate, max?.getTime(), min?.getTime()]);
+
+  const canGoPrevious = useMemo(() => {
+    if (!min) return true;
+    const previousMonth = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1, 12);
+    const minMonth = new Date(min.getFullYear(), min.getMonth(), 1, 12);
+    return previousMonth >= minMonth;
+  }, [cursor, min?.getTime()]);
+
+  const canGoNext = useMemo(() => {
+    if (!max) return true;
+    const nextMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1, 12);
+    const maxMonth = new Date(max.getFullYear(), max.getMonth(), 1, 12);
+    return nextMonth <= maxMonth;
+  }, [cursor, max?.getTime()]);
 
   const chooseDay = (date: Date) => {
     if ((max && date > max) || (min && date < min)) return;
-    setPendingDate(date);
-    if (
-      date.getMonth() !== cursor.getMonth() ||
-      date.getFullYear() !== cursor.getFullYear()
-    ) {
-      setCursor(new Date(date.getFullYear(), date.getMonth(), 1, 12));
-    }
+    const normalized = atNoon(date);
+    setPendingDate(normalized);
+    onChange(toIsoDate(normalized));
   };
 
-  const jumpToToday = () => {
-    const today = atNoon(new Date());
-    if ((max && today > max) || (min && today < min)) return;
+  const chooseToday = () => {
+    const today = clampDate(new Date());
     setPendingDate(today);
     setCursor(new Date(today.getFullYear(), today.getMonth(), 1, 12));
+    onChange(toIsoDate(today));
   };
 
-  const confirm = () => {
-    if (!pendingDate) return;
-    onChange(toIsoDate(pendingDate));
-    setVisible(false);
-  };
-
-  const cancel = () => {
-    setPendingDate(parseIsoDate(value));
-    setVisible(false);
+  const shiftYear = (amount: number) => {
+    const next = clampMonth(
+      new Date(cursor.getFullYear() + amount, cursor.getMonth(), 1, 12),
+    );
+    setCursor(next);
   };
 
   return (
@@ -224,52 +203,56 @@ export function DatePickerField({
       <Text style={styles.label}>{label}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label}، ${value ? formatArabicDate(value) : "لم يتم اختيار تاريخ"}`}
+        accessibilityLabel={`${label}، ${value || "لم يتم اختيار تاريخ"}`}
         onPress={() => setVisible(true)}
         style={({ pressed }) => [styles.trigger, pressed && styles.pressed]}
       >
-        <View style={styles.triggerTextWrap}>
-          <Text style={[styles.value, !value && styles.placeholder]}>
-            {value ? formatArabicDate(value) : placeholder}
+        <Text style={styles.triggerHint}>اختيار من التقويم</Text>
+        <View style={styles.dateValueWrap}>
+          <Text style={[styles.dateValue, !value && styles.placeholder]}>
+            {value || placeholder}
           </Text>
-          <Text style={styles.tapHint}>
-            {value
-              ? "اضغط لتغيير التاريخ"
-              : "اضغط لفتح التقويم واختيار التاريخ"}
-          </Text>
-        </View>
-        <View style={styles.calendarBadge}>
-          <Text style={styles.calendarIcon}>📅</Text>
+          <View style={styles.miniCalendarIcon}>
+            <View style={styles.miniCalendarInner} />
+          </View>
         </View>
       </Pressable>
-      {helperText ? <Text style={styles.helper}>{helperText}</Text> : null}
+
+      <View style={styles.helperRow}>
+        {value ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="مسح التاريخ"
+            onPress={() => onChange("")}
+            hitSlop={8}
+          >
+            <Text style={styles.clearText}>مسح التاريخ</Text>
+          </Pressable>
+        ) : (
+          <View />
+        )}
+        {helperText ? <Text style={styles.helper}>{helperText}</Text> : <View />}
+      </View>
 
       <Modal
         visible={visible}
         transparent
         animationType="fade"
-        onRequestClose={cancel}
+        onRequestClose={() => setVisible(false)}
       >
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
             <View style={styles.modalHeader}>
               <Pressable
-                onPress={cancel}
+                onPress={() => setVisible(false)}
                 accessibilityRole="button"
                 accessibilityLabel="إغلاق التقويم"
                 hitSlop={10}
-                style={styles.closeButton}
               >
-                <Text style={styles.close}>×</Text>
+                <Text style={styles.closeText}>إغلاق</Text>
               </Pressable>
-              <View style={styles.headerTextWrap}>
-                <Text style={styles.modalTitle}>{label}</Text>
-                <Text style={styles.selectedText}>
-                  {pendingDate
-                    ? `التاريخ المختار: ${formatArabicDate(toIsoDate(pendingDate))}`
-                    : "اختر يومًا من التقويم"}
-                </Text>
-              </View>
+              <Text style={styles.modalTitle}>اختيار التاريخ</Text>
+              <View style={styles.headerSpacer} />
             </View>
 
             <View style={styles.content}>
@@ -279,66 +262,62 @@ export function DatePickerField({
                   onPress={() =>
                     setCursor(
                       clampMonth(
-                        new Date(
-                          cursor.getFullYear(),
-                          cursor.getMonth() - 1,
-                          1,
-                          12,
-                        ),
+                        new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1, 12),
                       ),
                     )
                   }
-                  style={[styles.navArrow, !canGoPrevious && styles.disabled]}
+                  style={[styles.navButton, !canGoPrevious && styles.disabled]}
                   accessibilityLabel="الشهر السابق"
                 >
-                  <Text style={styles.navArrowText}>‹</Text>
+                  <Text style={styles.navText}>›</Text>
                 </Pressable>
 
-                <View style={styles.monthTitleWrap}>
+                <Pressable
+                  onPress={() => setYearToolsVisible((current) => !current)}
+                  style={styles.monthTitleButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="تغيير السنة"
+                >
                   <Text style={styles.monthTitle}>
-                    {MONTHS_AR[cursor.getMonth()]}
+                    {MONTHS_AR[cursor.getMonth()]} <Text style={styles.monthYear}>{cursor.getFullYear()}</Text>
                   </Text>
-                  <Text style={styles.yearTitle}>{cursor.getFullYear()}</Text>
-                </View>
+                </Pressable>
 
                 <Pressable
                   disabled={!canGoNext}
                   onPress={() =>
                     setCursor(
                       clampMonth(
-                        new Date(
-                          cursor.getFullYear(),
-                          cursor.getMonth() + 1,
-                          1,
-                          12,
-                        ),
+                        new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1, 12),
                       ),
                     )
                   }
-                  style={[styles.navArrow, !canGoNext && styles.disabled]}
+                  style={[styles.navButton, !canGoNext && styles.disabled]}
                   accessibilityLabel="الشهر التالي"
                 >
-                  <Text style={styles.navArrowText}>›</Text>
+                  <Text style={styles.navText}>‹</Text>
                 </Pressable>
               </View>
 
-              <View style={styles.yearTools}>
-                <Pressable onPress={() => shiftYear(-10)} style={styles.yearTool}>
-                  <Text style={styles.yearToolText}>−10</Text>
-                </Pressable>
-                <Pressable onPress={() => shiftYear(-1)} style={styles.yearTool}>
-                  <Text style={styles.yearToolText}>−1</Text>
-                </Pressable>
-                <Pressable onPress={jumpToToday} style={styles.todayChip}>
-                  <Text style={styles.todayChipText}>اليوم</Text>
-                </Pressable>
-                <Pressable onPress={() => shiftYear(1)} style={styles.yearTool}>
-                  <Text style={styles.yearToolText}>+1</Text>
-                </Pressable>
-                <Pressable onPress={() => shiftYear(10)} style={styles.yearTool}>
-                  <Text style={styles.yearToolText}>+10</Text>
-                </Pressable>
-              </View>
+              {yearToolsVisible ? (
+                <View style={styles.yearTools}>
+                  <Pressable onPress={() => shiftYear(-10)} style={styles.yearToolButton}>
+                    <Text style={styles.yearToolText}>−10</Text>
+                  </Pressable>
+                  <Pressable onPress={() => shiftYear(-1)} style={styles.yearToolButton}>
+                    <Text style={styles.yearToolText}>−1</Text>
+                  </Pressable>
+                  <View style={styles.yearPill}>
+                    <Text style={styles.yearPillText}>{cursor.getFullYear()}</Text>
+                  </View>
+                  <Pressable onPress={() => shiftYear(1)} style={styles.yearToolButton}>
+                    <Text style={styles.yearToolText}>+1</Text>
+                  </Pressable>
+                  <Pressable onPress={() => shiftYear(10)} style={styles.yearToolButton}>
+                    <Text style={styles.yearToolText}>+10</Text>
+                  </Pressable>
+                </View>
+              ) : null}
 
               <View style={styles.weekRow}>
                 {WEEKDAYS_AR.map((day) => (
@@ -349,64 +328,45 @@ export function DatePickerField({
               </View>
 
               <View style={styles.daysGrid}>
-                {days.map((item, index) => (
-                  <Pressable
-                    key={`${toIsoDate(item.date)}-${index}`}
-                    disabled={item.disabled}
-                    onPress={() => chooseDay(item.date)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`اختيار ${formatArabicDate(toIsoDate(item.date))}`}
-                    style={({ pressed }) => [
-                      styles.dayCell,
-                      item.selected && styles.daySelected,
-                      item.today && !item.selected && styles.dayToday,
-                      item.disabled && styles.dayDisabled,
-                      pressed && !item.disabled && styles.dayPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dayText,
-                        item.outside && styles.dayOutsideText,
-                        item.selected && styles.daySelectedText,
-                        item.disabled && styles.dayDisabledText,
-                      ]}
-                    >
-                      {item.date.getDate()}
-                    </Text>
-                  </Pressable>
+                {days.map((item) => (
+                  <View key={item.key} style={styles.daySlot}>
+                    {item.date ? (
+                      <Pressable
+                        disabled={item.disabled}
+                        onPress={() => chooseDay(item.date as Date)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`اختيار ${toIsoDate(item.date)}`}
+                        style={({ pressed }) => [
+                          styles.dayButton,
+                          item.selected && styles.daySelected,
+                          item.today && !item.selected && styles.dayToday,
+                          item.disabled && styles.dayDisabled,
+                          pressed && !item.disabled && styles.dayPressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.dayText,
+                            item.selected && styles.daySelectedText,
+                            item.disabled && styles.dayDisabledText,
+                          ]}
+                        >
+                          {item.date.getDate()}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
                 ))}
               </View>
 
-              <View style={styles.footerActions}>
-                <Pressable onPress={cancel} style={styles.cancelButton}>
-                  <Text style={styles.cancelButtonText}>إلغاء</Text>
-                </Pressable>
-
-                {value ? (
-                  <Pressable
-                    onPress={() => {
-                      onChange("");
-                      setPendingDate(null);
-                      setVisible(false);
-                    }}
-                    style={styles.clearButton}
-                  >
-                    <Text style={styles.clearButtonText}>مسح</Text>
-                  </Pressable>
-                ) : null}
-
-                <Pressable
-                  onPress={confirm}
-                  disabled={!pendingDate}
-                  style={[
-                    styles.confirmButton,
-                    !pendingDate && styles.disabled,
-                  ]}
-                >
-                  <Text style={styles.confirmButtonText}>اختيار التاريخ</Text>
-                </Pressable>
-              </View>
+              <Pressable
+                onPress={chooseToday}
+                style={({ pressed }) => [styles.todayButton, pressed && styles.todayPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="اختيار تاريخ اليوم"
+              >
+                <Text style={styles.todayButtonText}>اليوم</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -418,236 +378,260 @@ export function DatePickerField({
 const styles = StyleSheet.create({
   field: { marginTop: 12 },
   label: {
-    color: "#173A57",
+    color: COLORS.navy,
     fontSize: 16,
     fontWeight: "900",
     textAlign: "right",
-    marginTop: 9,
-    marginBottom: 7,
+    marginBottom: 8,
   },
   trigger: {
-    minHeight: 74,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#D8E5EA",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 12,
-    shadowColor: "#173A57",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  pressed: { opacity: 0.8 },
-  calendarBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "#E8F6F7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  calendarIcon: { fontSize: 24 },
-  triggerTextWrap: { flex: 1, alignItems: "flex-end" },
-  value: {
-    color: "#173A57",
-    fontSize: 18,
-    fontWeight: "900",
-    textAlign: "right",
-  },
-  placeholder: { color: "#7D8E99", fontWeight: "700" },
-  tapHint: {
-    color: "#607484",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "right",
-    marginTop: 4,
-  },
-  helper: {
-    color: "#607484",
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "right",
-    marginTop: 6,
-    marginHorizontal: 4,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(8, 28, 42, 0.62)",
-    justifyContent: "center",
-    padding: 16,
-  },
-  sheet: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    overflow: "hidden",
-    shadowColor: "#173A57",
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
-  },
-  modalHeader: {
+    minHeight: 76,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.line,
+    paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5EDF1",
     gap: 12,
   },
-  closeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: "#F1F6F8",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTextWrap: { flex: 1, alignItems: "flex-end" },
-  close: { color: "#607484", fontSize: 30, lineHeight: 32 },
-  modalTitle: {
-    color: "#173A57",
-    fontSize: 21,
-    fontWeight: "900",
-    textAlign: "right",
-  },
-  selectedText: {
-    color: "#607484",
+  pressed: { opacity: 0.82 },
+  triggerHint: {
+    color: "#9AA4AD",
     fontSize: 13,
     fontWeight: "700",
-    textAlign: "right",
-    marginTop: 3,
+    textAlign: "left",
   },
-  content: { padding: 16, paddingBottom: 18 },
-  monthNav: {
-    flexDirection: "row-reverse",
+  dateValueWrap: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: 12,
-    marginBottom: 10,
+    flexShrink: 1,
   },
-  navArrow: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "#F1F6F8",
-    borderWidth: 1,
-    borderColor: "#D8E5EA",
+  dateValue: {
+    color: "#111820",
+    fontSize: 22,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  placeholder: {
+    color: COLORS.muted,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  miniCalendarIcon: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: COLORS.teal,
     alignItems: "center",
     justifyContent: "center",
   },
-  navArrowText: {
-    color: "#173A57",
-    fontSize: 27,
-    fontWeight: "900",
-    lineHeight: 30,
+  miniCalendarInner: {
+    width: 8,
+    height: 8,
+    backgroundColor: COLORS.teal,
   },
-  monthTitleWrap: { alignItems: "center", flex: 1 },
-  monthTitle: { color: "#173A57", fontSize: 20, fontWeight: "900" },
-  yearTitle: {
-    color: "#607484",
-    fontSize: 14,
+  helperRow: {
+    minHeight: 22,
+    marginTop: 5,
+    paddingHorizontal: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  helper: {
+    color: COLORS.muted,
+    fontSize: 11,
+    lineHeight: 17,
+    textAlign: "right",
+    flex: 1,
+  },
+  clearText: {
+    color: COLORS.danger,
+    fontSize: 11,
     fontWeight: "800",
-    marginTop: 2,
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(20, 35, 52, 0.45)",
+    justifyContent: "center",
+    paddingHorizontal: 34,
+  },
+  sheet: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 32,
+    overflow: "hidden",
+    shadowColor: "#000000",
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
+  },
+  modalHeader: {
+    minHeight: 88,
+    paddingHorizontal: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  closeText: {
+    color: COLORS.teal,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  modalTitle: {
+    color: "#141A20",
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  headerSpacer: { width: 44 },
+  content: {
+    paddingHorizontal: 28,
+    paddingBottom: 28,
+  },
+  monthNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    marginBottom: 26,
+  },
+  navButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 15,
+    backgroundColor: COLORS.soft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navText: {
+    color: COLORS.navy,
+    fontSize: 31,
+    fontWeight: "500",
+    lineHeight: 34,
+  },
+  disabled: { opacity: 0.3 },
+  monthTitleButton: {
+    flex: 1,
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  monthTitle: {
+    color: "#1E2935",
+    fontSize: 20,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  monthYear: {
+    color: COLORS.navy,
+    fontWeight: "900",
   },
   yearTools: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginBottom: 14,
+    marginTop: -12,
+    marginBottom: 18,
   },
-  yearTool: {
+  yearToolButton: {
     minWidth: 44,
-    minHeight: 36,
+    minHeight: 38,
     paddingHorizontal: 8,
     borderRadius: 11,
-    backgroundColor: "#F6F9FA",
-    borderWidth: 1,
-    borderColor: "#D8E5EA",
+    backgroundColor: COLORS.soft,
     alignItems: "center",
     justifyContent: "center",
   },
-  yearToolText: { color: "#173A57", fontSize: 12, fontWeight: "900" },
-  todayChip: {
-    minHeight: 36,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: "#E8F6F7",
+  yearToolText: {
+    color: COLORS.navy,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  yearPill: {
+    minWidth: 72,
+    minHeight: 38,
+    paddingHorizontal: 10,
+    borderRadius: 11,
+    backgroundColor: COLORS.navy,
     alignItems: "center",
     justifyContent: "center",
   },
-  todayChipText: { color: "#087E8B", fontSize: 13, fontWeight: "900" },
-  disabled: { opacity: 0.35 },
-  weekRow: { flexDirection: "row-reverse", marginBottom: 7 },
-  weekCell: { width: "14.2857%", alignItems: "center" },
-  weekText: { color: "#607484", fontSize: 12, fontWeight: "900" },
-  daysGrid: { flexDirection: "row-reverse", flexWrap: "wrap" },
-  dayCell: {
-    width: "14.2857%",
-    aspectRatio: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "transparent",
-    marginBottom: 3,
+  yearPillText: {
+    color: COLORS.surface,
+    fontSize: 13,
+    fontWeight: "900",
   },
-  dayText: { color: "#173A57", fontSize: 16, fontWeight: "800" },
-  dayOutsideText: { color: "#B1BDC4" },
-  daySelected: {
-    backgroundColor: "#087E8B",
-    shadowColor: "#087E8B",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  daySelectedText: { color: "#FFFFFF", fontWeight: "900" },
-  dayToday: { borderColor: "#087E8B", backgroundColor: "#E8F6F7" },
-  dayDisabled: { opacity: 0.24 },
-  dayDisabledText: { color: "#A8B6BF" },
-  dayPressed: { backgroundColor: "#EDF4FC" },
-  footerActions: {
+  weekRow: {
     flexDirection: "row-reverse",
-    gap: 8,
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "#E5EDF1",
+    marginBottom: 8,
   },
-  confirmButton: {
-    flex: 1.5,
-    minHeight: 50,
-    borderRadius: 14,
-    backgroundColor: "#087E8B",
+  weekCell: {
+    width: "14.2857%",
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
-  confirmButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
-  cancelButton: {
-    flex: 1,
-    minHeight: 50,
-    borderRadius: 14,
-    backgroundColor: "#F1F6F8",
+  weekText: {
+    color: "#64717C",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  daysGrid: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+  },
+  daySlot: {
+    width: "14.2857%",
+    height: 47,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  dayButton: {
+    width: "100%",
+    height: 42,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelButtonText: { color: "#173A57", fontSize: 15, fontWeight: "900" },
-  clearButton: {
-    minWidth: 64,
-    minHeight: 50,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: "#FFF0F2",
+  dayText: {
+    color: "#27313A",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  daySelected: {
+    backgroundColor: COLORS.teal,
+  },
+  daySelectedText: {
+    color: COLORS.surface,
+    fontWeight: "900",
+  },
+  dayToday: {
+    borderWidth: 1.5,
+    borderColor: COLORS.teal,
+  },
+  dayDisabled: { opacity: 0.25 },
+  dayDisabledText: { color: "#9DA8B0" },
+  dayPressed: { backgroundColor: COLORS.tealSoft },
+  todayButton: {
+    minHeight: 68,
+    borderRadius: 20,
+    backgroundColor: COLORS.navy,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 34,
   },
-  clearButtonText: { color: "#B63A49", fontSize: 14, fontWeight: "900" },
+  todayPressed: { opacity: 0.88 },
+  todayButtonText: {
+    color: COLORS.surface,
+    fontSize: 19,
+    fontWeight: "900",
+  },
 });

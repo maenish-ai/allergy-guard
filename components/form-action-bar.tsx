@@ -1,11 +1,12 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
+const SAVE_TEAL = "#169D90";
+
 type FormActionBarProps = {
   label: string;
   onPress: () => void;
   busy?: boolean;
   disabled?: boolean;
-  color?: string;
   hint?: string;
   topBorder?: boolean;
   bottomPadding?: number;
@@ -16,7 +17,6 @@ export function FormActionBar({
   onPress,
   busy = false,
   disabled = false,
-  color = "#087E8B",
   hint,
   topBorder = true,
   bottomPadding = 18,
@@ -26,7 +26,7 @@ export function FormActionBar({
       style={[
         styles.wrap,
         topBorder && styles.topBorder,
-        { paddingBottom: Math.max(bottomPadding, 14) },
+        { paddingBottom: Math.max(bottomPadding, 16) },
       ]}
     >
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
@@ -37,7 +37,6 @@ export function FormActionBar({
         accessibilityLabel={label}
         style={({ pressed }) => [
           styles.button,
-          { backgroundColor: color },
           pressed && styles.pressed,
           (busy || disabled) && styles.disabled,
         ]}
@@ -45,7 +44,7 @@ export function FormActionBar({
         {busy ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <Text style={styles.text}>✓ {label}</Text>
+          <Text style={styles.text}>{label}</Text>
         )}
       </Pressable>
     </View>
@@ -60,33 +59,35 @@ const styles = StyleSheet.create({
   },
   topBorder: {
     borderTopWidth: 1,
-    borderTopColor: "#D8E5EA",
+    borderTopColor: "#E3E8EB",
   },
   hint: {
-    color: "#607484",
-    fontSize: 13,
+    color: "#697A87",
+    fontSize: 12,
     fontWeight: "700",
-    lineHeight: 19,
+    lineHeight: 18,
     textAlign: "right",
     marginBottom: 8,
   },
   button: {
-    minHeight: 62,
-    borderRadius: 18,
+    minHeight: 70,
+    borderRadius: 24,
+    backgroundColor: SAVE_TEAL,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 18,
-    shadowColor: "#173A57",
+    paddingHorizontal: 20,
+    shadowColor: "#0D6F67",
     shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
   },
   text: {
     color: "#FFFFFF",
-    fontSize: 19,
+    fontSize: 21,
     fontWeight: "900",
+    textAlign: "center",
   },
-  pressed: { opacity: 0.82, transform: [{ scale: 0.995 }] },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.995 }] },
   disabled: { opacity: 0.5 },
 });

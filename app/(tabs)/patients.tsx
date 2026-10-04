@@ -206,14 +206,7 @@ export default function PatientsScreen() {
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <Pressable
-                onPress={save}
-                style={({ pressed }) => [styles.headerSaveButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={editingId ? "حفظ التعديلات" : "إضافة المريض"}
-              >
-                <Text style={styles.headerSaveButtonText}>{editingId ? "حفظ" : "إضافة"}</Text>
-              </Pressable>
+              <View style={styles.headerSideSpacer} />
               <Text style={styles.sheetTitle}>{editingId ? "تعديل بيانات المريض" : "إضافة مريض جديد"}</Text>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={12}>
                 <Text style={styles.close}>×</Text>
@@ -256,9 +249,7 @@ export default function PatientsScreen() {
             <FormActionBar
               label={editingId ? "حفظ التعديلات" : "حفظ المريض"}
               onPress={save}
-              color={C.teal}
               bottomPadding={Math.max(insets.bottom, 18)}
-              hint={editingId ? "احفظ أي تعديل على بيانات المريض قبل الإغلاق." : "بعد تعبئة البيانات اضغط حفظ المريض لإنشاء الملف."}
             />
           </View>
         </View>
@@ -276,8 +267,7 @@ const styles = StyleSheet.create({
   primaryButton: { backgroundColor: C.teal, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   primaryButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.99 }] },
-  headerSaveButton: { minWidth: 72, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, shadowColor: C.navy, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  headerSideSpacer: { width: 38, height: 38 },
   activeBanner: { backgroundColor: C.tealSoft, borderColor: "#C7E7EA", borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 16 },
   activeLabel: { color: C.teal, fontSize: 13, fontWeight: "800", textAlign: "right" },
   activeName: { color: C.navy, fontSize: 20, fontWeight: "900", textAlign: "right", marginTop: 3 },
@@ -322,6 +312,4 @@ const styles = StyleSheet.create({
   genderButtonActive: { backgroundColor: C.teal, borderColor: C.teal },
   genderText: { color: C.navy, fontSize: 16, fontWeight: "800" },
   genderTextActive: { color: "#FFF" },
-  saveButton: { minHeight: 56, backgroundColor: C.teal, borderRadius: 16, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  saveButtonText: { color: "#FFF", fontSize: 18, fontWeight: "900" },
 });

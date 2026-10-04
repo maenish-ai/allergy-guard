@@ -707,24 +707,7 @@ export default function RecordsScreen() {
         >
           <View style={styles.editorSheet}>
             <View style={styles.modalHeader}>
-              <Pressable
-                onPress={save}
-                disabled={saving}
-                style={({ pressed }) => [
-                  styles.headerSaveButton,
-                  { backgroundColor: selectedOption.color },
-                  pressed && styles.pressed,
-                  saving && styles.disabled,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ السجل"}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <Text style={styles.headerSaveButtonText}>{editingId ? "حفظ" : "إضافة"}</Text>
-                )}
-              </Pressable>
+              <View style={styles.headerSideSpacer} />
               <View style={styles.editorHeaderText}>
                 <Text style={styles.modalTitle}>
                   {editingId ? `تعديل ${selectedOption.label}` : `إضافة ${selectedOption.label}`}
@@ -876,22 +859,37 @@ export default function RecordsScreen() {
             </ScrollView>
 
             <FormActionBar
-              label={editingId ? "حفظ التعديلات" : "حفظ السجل"}
+              label={editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}
               onPress={save}
               busy={saving}
-              color={selectedOption.color}
               bottomPadding={Math.max(insets.bottom, 18)}
-              hint={
-                editingId
-                  ? `بعد تعديل ${selectedOption.label} اضغط حفظ التعديلات`
-                  : `بعد تعبئة ${selectedOption.label} اضغط حفظ السجل`
-              }
             />
           </View>
         </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );
+}
+
+function saveActionLabelFor(kind: RecordKind) {
+  switch (kind) {
+    case "medicine":
+      return "حفظ الدواء";
+    case "medicine-allergy":
+      return "حفظ الحساسية الدوائية";
+    case "food-allergy":
+      return "حفظ الحساسية الغذائية";
+    case "other-allergy":
+      return "حفظ الحساسية";
+    case "chronic-condition":
+      return "حفظ المرض المزمن";
+    case "surgery":
+      return "حفظ العملية";
+    case "medical-note":
+      return "حفظ الملاحظة الطبية";
+    case "medicine-tolerated":
+      return "حفظ الدواء";
+  }
 }
 
 function nameLabelFor(kind: RecordKind) {
@@ -1096,8 +1094,7 @@ const styles = StyleSheet.create({
   modalEditText: { color: "#FFF", fontSize: 17, fontWeight: "900" },
   modalDelete: { minWidth: 96, minHeight: 54, borderRadius: 15, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" },
   modalDeleteText: { color: C.red, fontSize: 17, fontWeight: "900" },
-  headerSaveButton: { minWidth: 72, minHeight: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, shadowColor: "#173A57", shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  headerSideSpacer: { width: 38, height: 38 },
   kindOptionsWrap: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 6 },
   kindOption: { minHeight: 46, paddingHorizontal: 13, borderRadius: 13, backgroundColor: "#EFF4F6", borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
   kindOptionText: { color: C.navy, fontSize: 14, fontWeight: "800" },
@@ -1112,8 +1109,4 @@ const styles = StyleSheet.create({
   severityDanger: { backgroundColor: C.red },
   severityText: { color: C.muted, fontSize: 16, fontWeight: "900" },
   severityTextActive: { color: "#FFF" },
-  saveFooter: { backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.line, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 },
-  saveHint: { color: C.muted, fontSize: 14, fontWeight: "700", textAlign: "right", marginBottom: 8 },
-  saveButton: { minHeight: 64, borderRadius: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
-  saveText: { color: "#FFF", fontSize: 20, fontWeight: "900" },
 });
