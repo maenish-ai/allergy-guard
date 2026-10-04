@@ -3,15 +3,19 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  ToastAndroid,
   View,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { DatePickerField, formatArabicDate } from "@/components/date-picker-field";
 import {
   useAllergy,
   type AllergyRecord,
@@ -194,6 +198,7 @@ export default function RecordsScreen() {
   const [notes, setNotes] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [exporting, setExporting] = useState<"pdf" | "csv" | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const shown = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ar");
@@ -267,7 +272,7 @@ export default function RecordsScreen() {
   };
 
   const save = () => {
-    if (!activePatient) return;
+    if (!activePatient || saving) return;
     if (!name.trim()) {
       Alert.alert("بيانات ناقصة", `أدخل ${nameLabelFor(kind)} أولًا.`);
       return;
@@ -295,11 +300,29 @@ export default function RecordsScreen() {
       eventDate: eventDate.trim(),
     };
 
-    if (editingId) updateRecord(editingId, input);
-    else addRecord(input);
+    const savedKind = kind;
+    const wasEditing = Boolean(editingId);
+    setSaving(true);
 
-    setEditorVisible(false);
-    resetDraft();
+    try {
+      if (editingId) updateRecord(editingId, input);
+      else addRecord(input);
+
+      // Show the saved item immediately even if another filter/search was active.
+      setFilter(savedKind);
+      setQuery("");
+      setEditorVisible(false);
+      resetDraft();
+
+      const message = wasEditing ? "تم حفظ التعديلات" : `تم حفظ ${labelFor(savedKind)}`;
+      if (Platform.OS === "android") {
+        ToastAndroid.show(message, ToastAndroid.SHORT);
+      } else {
+        Alert.alert("تم الحفظ", message);
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const remove = (record: AllergyRecord) =>
@@ -640,7 +663,7 @@ export default function RecordsScreen() {
                   <Detail label="شدة الحساسية" value={viewRecord.severity} />
                 ) : null}
                 {viewRecord.eventDate ? (
-                  <Detail label="التاريخ المرتبط بالسجل" value={viewRecord.eventDate} />
+                  <Detail label="التاريخ المرتبط بالسجل" value={formatArabicDate(viewRecord.eventDate)} />
                 ) : null}
                 {viewRecord.notes ? <Detail label="ملاحظات" value={viewRecord.notes} /> : null}
                 <Detail
@@ -673,7 +696,11 @@ export default function RecordsScreen() {
         animationType="slide"
         onRequestClose={() => setEditorVisible(false)}
       >
-        <View style={styles.backdrop}>
+        <KeyboardAvoidingView
+          style={styles.backdrop}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
           <View style={styles.editorSheet}>
             <View style={styles.modalHeader}>
               <Pressable onPress={() => setEditorVisible(false)} hitSlop={12}>
@@ -688,8 +715,11 @@ export default function RecordsScreen() {
             </View>
 
             <ScrollView
-              contentContainerStyle={styles.modalContent}
+              style={styles.editorScroll}
+              contentContainerStyle={[styles.modalContent, styles.editorContent]}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
             >
               <View style={[styles.selectedKindCard, { backgroundColor: selectedOption.soft }]}> 
                 <Text style={styles.selectedKindIcon}>{selectedOption.icon}</Text>
@@ -805,11 +835,13 @@ export default function RecordsScreen() {
                 </>
               ) : null}
 
-              <Field
+              <DatePickerField
                 label={dateLabelFor(kind)}
                 value={eventDate}
                 onChange={setEventDate}
-                placeholder="YYYY-MM-DD (اختياري)"
+                placeholder="اختر التاريخ (اختياري)"
+                maximumDate={maximumDateFor(kind)}
+                helperText="اختيار التاريخ من التقويم يمنع أخطاء الكتابة."
               />
               <Field
                 label="ملاحظات إضافية"
@@ -819,21 +851,37 @@ export default function RecordsScreen() {
                 placeholder="أي معلومة أخرى مهمة"
               />
 
+            </ScrollView>
+
+            <View style={styles.saveFooter}>
+              <Text style={styles.saveHint}>
+                {editingId
+                  ? `بعد تعديل ${selectedOption.label} اضغط حفظ التعديلات`
+                  : `بعد تعبئة ${selectedOption.label} اضغط حفظ السجل`}
+              </Text>
               <Pressable
                 onPress={save}
+                disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ السجل"}
                 style={({ pressed }) => [
                   styles.saveButton,
                   { backgroundColor: selectedOption.color },
                   pressed && styles.pressed,
+                  saving && styles.disabled,
                 ]}
               >
-                <Text style={styles.saveText}>
-                  {editingId ? "حفظ التعديلات" : `حفظ ${selectedOption.label}`}
-                </Text>
+                {saving ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.saveText}>
+                    {editingId ? "✓ حفظ التعديلات" : "✓ حفظ السجل"}
+                  </Text>
+                )}
               </Pressable>
-            </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );
@@ -915,6 +963,19 @@ function purposePlaceholderFor(kind: RecordKind) {
       return "متى حصلت؟ وهل احتاجت علاجًا أو طوارئ؟";
     case "medicine-tolerated":
       return "متى استُخدم؟ وأي ملاحظات مهمة";
+  }
+}
+
+function maximumDateFor(kind: RecordKind) {
+  switch (kind) {
+    case "chronic-condition":
+    case "surgery":
+    case "medicine-allergy":
+    case "food-allergy":
+    case "other-allergy":
+      return new Date();
+    default:
+      return undefined;
   }
 }
 
@@ -1007,13 +1068,15 @@ const styles = StyleSheet.create({
   emptyText: { color: C.muted, fontSize: 16, lineHeight: 25, textAlign: "center" },
   backdrop: { flex: 1, backgroundColor: "rgba(8, 28, 42, 0.50)", justifyContent: "flex-end" },
   detailSheet: { maxHeight: "88%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
-  editorSheet: { maxHeight: "95%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  editorSheet: { height: "95%", maxHeight: "95%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: 1, borderBottomColor: C.line, gap: 12 },
   editorHeaderText: { flex: 1 },
   close: { color: C.muted, fontSize: 36, lineHeight: 38 },
   modalTitle: { color: C.navy, fontSize: 22, fontWeight: "900", textAlign: "right" },
   modalSubtitle: { color: C.muted, fontSize: 13, lineHeight: 19, textAlign: "right", marginTop: 2 },
   modalContent: { padding: 20, paddingBottom: 38 },
+  editorScroll: { flex: 1 },
+  editorContent: { paddingBottom: 24 },
   selectedKindCard: { borderRadius: 18, padding: 14, flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 8 },
   selectedKindIcon: { fontSize: 32 },
   selectedKindTitle: { fontSize: 19, fontWeight: "900", textAlign: "right" },
@@ -1040,6 +1103,8 @@ const styles = StyleSheet.create({
   severityDanger: { backgroundColor: C.red },
   severityText: { color: C.muted, fontSize: 16, fontWeight: "900" },
   severityTextActive: { color: "#FFF" },
-  saveButton: { minHeight: 60, borderRadius: 16, alignItems: "center", justifyContent: "center", marginTop: 24 },
-  saveText: { color: "#FFF", fontSize: 19, fontWeight: "900" },
+  saveFooter: { backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.line, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 },
+  saveHint: { color: C.muted, fontSize: 14, fontWeight: "700", textAlign: "right", marginBottom: 8 },
+  saveButton: { minHeight: 64, borderRadius: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
+  saveText: { color: "#FFF", fontSize: 20, fontWeight: "900" },
 });

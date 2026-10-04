@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { DatePickerField, formatArabicDate } from "@/components/date-picker-field";
 import {
   emptyProfile,
   useAllergy,
@@ -176,6 +177,7 @@ export default function PatientsScreen() {
                     </View>
                     <Text style={styles.patientMeta}>
                       {patient.bloodType ? `فصيلة ${patient.bloodType} · ` : ""}
+                      {patient.birthDate ? `${formatArabicDate(patient.birthDate)} · ` : ""}
                       {patient.records.length} سجل صحي
                     </Text>
                   </View>
@@ -227,7 +229,14 @@ export default function PatientsScreen() {
                   </View>
                 </View>
               </View>
-              <Input label="تاريخ الميلاد" value={draft.birthDate} onChange={(v) => setDraft({ ...draft, birthDate: v })} placeholder="YYYY-MM-DD" />
+              <DatePickerField
+                label="تاريخ الميلاد"
+                value={draft.birthDate}
+                onChange={(v) => setDraft({ ...draft, birthDate: v })}
+                placeholder="اختر تاريخ الميلاد"
+                maximumDate={new Date()}
+                helperText="لا يمكن اختيار تاريخ ميلاد في المستقبل."
+              />
               <Input label="رقم الهاتف" value={draft.phone} onChange={(v) => setDraft({ ...draft, phone: v })} placeholder="07xxxxxxxx" keyboardType="phone-pad" />
               <Input label="جهة اتصال للطوارئ" value={draft.emergencyContact} onChange={(v) => setDraft({ ...draft, emergencyContact: v })} placeholder="الاسم + الهاتف" />
               <Input label="الطبيب / المنشأة" value={draft.doctor} onChange={(v) => setDraft({ ...draft, doctor: v })} placeholder="اختياري" />
