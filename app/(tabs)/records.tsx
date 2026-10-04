@@ -728,6 +728,22 @@ export default function RecordsScreen() {
               </Pressable>
             </View>
 
+            <View style={styles.alwaysVisibleSaveArea}>
+              <Pressable
+                onPress={save}
+                disabled={saving}
+                style={({ pressed }) => [styles.alwaysVisibleSaveButton, pressed && !saving && styles.pressed, saving && styles.headerSaveDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel={editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.alwaysVisibleSaveText}>{editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}</Text>
+                )}
+              </Pressable>
+            </View>
+
             <ScrollView
               style={styles.editorScroll}
               contentContainerStyle={[styles.modalContent, styles.editorContent]}
@@ -872,7 +888,6 @@ export default function RecordsScreen() {
               onPress={save}
               busy={saving}
               bottomPadding={18}
-              sticky
             />
           </View>
         </KeyboardAvoidingView>
@@ -1091,7 +1106,7 @@ const styles = StyleSheet.create({
   modalSubtitle: { color: C.muted, fontSize: 13, lineHeight: 19, textAlign: "right", marginTop: 2 },
   modalContent: { padding: 20, paddingBottom: 38 },
   editorScroll: { flex: 1 },
-  editorContent: { paddingBottom: 150 },
+  editorContent: { paddingBottom: 24 },
   selectedKindCard: { borderRadius: 18, padding: 14, flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 8 },
   selectedKindIcon: { fontSize: 32 },
   selectedKindTitle: { fontSize: 19, fontWeight: "900", textAlign: "right" },
@@ -1106,6 +1121,9 @@ const styles = StyleSheet.create({
   modalDeleteText: { color: C.red, fontSize: 17, fontWeight: "900" },
   headerSaveButton: { minWidth: 74, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
   headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  alwaysVisibleSaveArea: { backgroundColor: C.card, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line },
+  alwaysVisibleSaveButton: { minHeight: 58, borderRadius: 18, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, elevation: 3 },
+  alwaysVisibleSaveText: { color: "#FFF", fontSize: 19, fontWeight: "900", textAlign: "center" },
   headerSaveDisabled: { opacity: 0.55 },
   kindOptionsWrap: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 6 },
   kindOption: { minHeight: 46, paddingHorizontal: 13, borderRadius: 13, backgroundColor: "#EFF4F6", borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },

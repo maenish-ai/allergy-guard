@@ -1,6 +1,6 @@
 import type { ExpoConfig } from "expo/config";
 
-const version = "0.6.6";
+const version = "0.6.7";
 const [major, minor, patch] = version.split(".").map(Number);
 const versionCode = major * 10000 + minor * 100 + patch;
 

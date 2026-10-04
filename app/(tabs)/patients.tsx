@@ -221,6 +221,16 @@ export default function PatientsScreen() {
                 <Text style={styles.close}>×</Text>
               </Pressable>
             </View>
+            <View style={styles.alwaysVisibleSaveArea}>
+              <Pressable
+                onPress={save}
+                style={({ pressed }) => [styles.alwaysVisibleSaveButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ المريض"}
+              >
+                <Text style={styles.alwaysVisibleSaveText}>{editingId ? "حفظ التعديلات" : "حفظ المريض"}</Text>
+              </Pressable>
+            </View>
             <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.form}>
               <Input label="الاسم الكامل *" value={draft.fullName} onChange={(v) => setDraft({ ...draft, fullName: v })} placeholder="مثال: أحمد محمد" />
               <View style={styles.twoColumns}>
@@ -259,7 +269,6 @@ export default function PatientsScreen() {
               label={editingId ? "حفظ التعديلات" : "حفظ المريض"}
               onPress={save}
               bottomPadding={18}
-              sticky
             />
           </View>
         </View>
@@ -309,9 +318,12 @@ const styles = StyleSheet.create({
   sheetTitle: { flex: 1, color: C.navy, fontSize: 21, fontWeight: "900", textAlign: "center" },
   headerSaveButton: { minWidth: 74, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
   headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  alwaysVisibleSaveArea: { backgroundColor: C.card, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line },
+  alwaysVisibleSaveButton: { minHeight: 58, borderRadius: 18, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, elevation: 3 },
+  alwaysVisibleSaveText: { color: "#FFF", fontSize: 19, fontWeight: "900", textAlign: "center" },
   close: { color: C.muted, fontSize: 34, fontWeight: "500", lineHeight: 38 },
   formScroll: { flex: 1 },
-  form: { padding: 20, paddingBottom: 150 },
+  form: { padding: 20, paddingBottom: 24 },
   field: { marginBottom: 14 },
   label: { color: C.navy, fontSize: 15, fontWeight: "800", textAlign: "right", marginBottom: 7 },
   input: { minHeight: 52, backgroundColor: "#F8FBFC", borderWidth: 1, borderColor: C.line, borderRadius: 14, paddingHorizontal: 14, color: C.navy, fontSize: 17 },
