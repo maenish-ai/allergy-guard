@@ -10,6 +10,7 @@ type FormActionBarProps = {
   hint?: string;
   topBorder?: boolean;
   bottomPadding?: number;
+  sticky?: boolean;
 };
 
 export function FormActionBar({
@@ -20,11 +21,13 @@ export function FormActionBar({
   hint,
   topBorder = true,
   bottomPadding = 18,
+  sticky = false,
 }: FormActionBarProps) {
   return (
     <View
       style={[
         styles.wrap,
+        sticky && styles.stickyWrap,
         topBorder && styles.topBorder,
         { paddingBottom: Math.max(bottomPadding, 16) },
       ]}
@@ -56,6 +59,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 18,
     paddingTop: 12,
+  },
+  stickyWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+    elevation: 18,
+    shadowColor: "#17324D",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
   },
   topBorder: {
     borderTopWidth: 1,

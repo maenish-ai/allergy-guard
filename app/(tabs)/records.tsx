@@ -707,7 +707,15 @@ export default function RecordsScreen() {
         >
           <View style={styles.editorSheet}>
             <View style={styles.modalHeader}>
-              <View style={styles.headerSideSpacer} />
+              <Pressable
+                onPress={save}
+                disabled={saving}
+                style={({ pressed }) => [styles.headerSaveButton, pressed && !saving && styles.pressed, saving && styles.headerSaveDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel={editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}
+              >
+                <Text style={styles.headerSaveButtonText}>{saving ? "..." : "حفظ"}</Text>
+              </Pressable>
               <View style={styles.editorHeaderText}>
                 <Text style={styles.modalTitle}>
                   {editingId ? `تعديل ${selectedOption.label}` : `إضافة ${selectedOption.label}`}
@@ -863,6 +871,7 @@ export default function RecordsScreen() {
               onPress={save}
               busy={saving}
               bottomPadding={Math.max(insets.bottom, 18)}
+              sticky
             />
           </View>
         </KeyboardAvoidingView>
@@ -1073,7 +1082,7 @@ const styles = StyleSheet.create({
   emptyText: { color: C.muted, fontSize: 16, lineHeight: 25, textAlign: "center" },
   backdrop: { flex: 1, backgroundColor: "rgba(8, 28, 42, 0.50)", justifyContent: "flex-end" },
   detailSheet: { maxHeight: "88%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
-  editorSheet: { height: "95%", maxHeight: "95%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
+  editorSheet: { height: "95%", maxHeight: "95%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden", position: "relative" },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: 1, borderBottomColor: C.line, gap: 12 },
   editorHeaderText: { flex: 1, alignItems: "flex-end" },
   close: { color: C.muted, fontSize: 36, lineHeight: 38 },
@@ -1081,7 +1090,7 @@ const styles = StyleSheet.create({
   modalSubtitle: { color: C.muted, fontSize: 13, lineHeight: 19, textAlign: "right", marginTop: 2 },
   modalContent: { padding: 20, paddingBottom: 38 },
   editorScroll: { flex: 1 },
-  editorContent: { paddingBottom: 24 },
+  editorContent: { paddingBottom: 150 },
   selectedKindCard: { borderRadius: 18, padding: 14, flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 8 },
   selectedKindIcon: { fontSize: 32 },
   selectedKindTitle: { fontSize: 19, fontWeight: "900", textAlign: "right" },
@@ -1094,7 +1103,9 @@ const styles = StyleSheet.create({
   modalEditText: { color: "#FFF", fontSize: 17, fontWeight: "900" },
   modalDelete: { minWidth: 96, minHeight: 54, borderRadius: 15, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" },
   modalDeleteText: { color: C.red, fontSize: 17, fontWeight: "900" },
-  headerSideSpacer: { width: 38, height: 38 },
+  headerSaveButton: { minWidth: 74, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
+  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  headerSaveDisabled: { opacity: 0.55 },
   kindOptionsWrap: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 6 },
   kindOption: { minHeight: 46, paddingHorizontal: 13, borderRadius: 13, backgroundColor: "#EFF4F6", borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
   kindOptionText: { color: C.navy, fontSize: 14, fontWeight: "800" },

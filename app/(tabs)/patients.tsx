@@ -206,7 +206,14 @@ export default function PatientsScreen() {
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <View style={styles.headerSideSpacer} />
+              <Pressable
+                onPress={save}
+                style={({ pressed }) => [styles.headerSaveButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ المريض"}
+              >
+                <Text style={styles.headerSaveButtonText}>حفظ</Text>
+              </Pressable>
               <Text style={styles.sheetTitle}>{editingId ? "تعديل بيانات المريض" : "إضافة مريض جديد"}</Text>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={12}>
                 <Text style={styles.close}>×</Text>
@@ -250,6 +257,7 @@ export default function PatientsScreen() {
               label={editingId ? "حفظ التعديلات" : "حفظ المريض"}
               onPress={save}
               bottomPadding={Math.max(insets.bottom, 18)}
+              sticky
             />
           </View>
         </View>
@@ -267,7 +275,6 @@ const styles = StyleSheet.create({
   primaryButton: { backgroundColor: C.teal, minHeight: 52, borderRadius: 16, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   primaryButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.99 }] },
-  headerSideSpacer: { width: 38, height: 38 },
   activeBanner: { backgroundColor: C.tealSoft, borderColor: "#C7E7EA", borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 16 },
   activeLabel: { color: C.teal, fontSize: 13, fontWeight: "800", textAlign: "right" },
   activeName: { color: C.navy, fontSize: 20, fontWeight: "900", textAlign: "right", marginTop: 3 },
@@ -295,12 +302,14 @@ const styles = StyleSheet.create({
   emptyButton: { marginTop: 18, backgroundColor: C.teal, minHeight: 52, borderRadius: 15, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },
   emptyButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   backdrop: { flex: 1, backgroundColor: "rgba(10, 30, 45, 0.45)", justifyContent: "flex-end" },
-  sheet: { height: "92%", maxHeight: "92%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 18, overflow: "hidden" },
+  sheet: { height: "92%", maxHeight: "92%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 18, overflow: "hidden", position: "relative" },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.line },
-  sheetTitle: { color: C.navy, fontSize: 21, fontWeight: "900", textAlign: "right" },
+  sheetTitle: { flex: 1, color: C.navy, fontSize: 21, fontWeight: "900", textAlign: "center" },
+  headerSaveButton: { minWidth: 74, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
+  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   close: { color: C.muted, fontSize: 34, fontWeight: "500", lineHeight: 38 },
   formScroll: { flex: 1 },
-  form: { padding: 20, paddingBottom: 34 },
+  form: { padding: 20, paddingBottom: 150 },
   field: { marginBottom: 14 },
   label: { color: C.navy, fontSize: 15, fontWeight: "800", textAlign: "right", marginBottom: 7 },
   input: { minHeight: 52, backgroundColor: "#F8FBFC", borderWidth: 1, borderColor: C.line, borderRadius: 14, paddingHorizontal: 14, color: C.navy, fontSize: 17 },

@@ -315,6 +315,14 @@ export default function EmergencyScreen() {
           <View style={styles.form}>
             <View style={styles.formHeaderRow}>
               <Text style={styles.formTitle}>تعديل بيانات البطاقة</Text>
+              <Pressable
+                onPress={save}
+                style={({ pressed }) => [styles.formHeaderSave, pressed && { opacity: 0.82 }]}
+                accessibilityRole="button"
+                accessibilityLabel="حفظ التعديلات"
+              >
+                <Text style={styles.formHeaderSaveText}>حفظ</Text>
+              </Pressable>
             </View>
             <TextInput
               value={draft.fullName}
@@ -627,7 +635,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 8,
   },
-  formHeaderRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "flex-start", marginBottom: 8 },
+  formHeaderRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  formHeaderSave: { minWidth: 72, minHeight: 42, borderRadius: 13, backgroundColor: "#169D90", alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
+  formHeaderSaveText: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
   save: {
     backgroundColor: palette.navy,
     borderRadius: 11,
