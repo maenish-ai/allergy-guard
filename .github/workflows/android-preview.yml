@@ -43,7 +43,7 @@ jobs:
 
       - name: Verify required packages
         run: |
-          node -e "require.resolve('expo-print/package.json'); require.resolve('expo-mail-composer/package.json'); require.resolve('expo-notifications/package.json'); require.resolve('expo-secure-store/package.json'); console.log('required packages are installed')"
+          node -e "require.resolve('expo-print/package.json'); require.resolve('expo-mail-composer/package.json'); require.resolve('expo-sharing/package.json'); require.resolve('expo-notifications/package.json'); require.resolve('expo-secure-store/package.json'); console.log('required packages are installed')"
 
       - name: Verify simple email backup mode
         run: |

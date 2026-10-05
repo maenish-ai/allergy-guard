@@ -120,8 +120,10 @@ export default function SettingsScreen() {
       const result = await emailEncryptedBackupNow();
       setLastPreparedAt(result.lastPreparedAt);
       Alert.alert(
-        "النسخة جاهزة",
-        "تم تجهيز رسالة البريد ووضع النسخة المشفرة كمرفق. اختر حساب الإرسال في تطبيق البريد إذا كان عندك أكثر من حساب، ثم اضغط إرسال.",
+        result.deliveryMethod === "mail" ? "تم فتح البريد" : "تم فتح المشاركة",
+        result.deliveryMethod === "mail"
+          ? "النسخة المشفرة مرفقة والرسالة موجهة إلى بريدك. اضغط «إرسال» داخل تطبيق البريد."
+          : `اختر Gmail أو Outlook أو تطبيق البريد الذي تستخدمه، ثم أرسل الملف إلى ${result.recipient}.`,
       );
     } catch (error) {
       Alert.alert("تعذر تجهيز النسخة", error instanceof Error ? error.message : "حدث خطأ غير متوقع.");
@@ -235,16 +237,18 @@ export default function SettingsScreen() {
               accessibilityRole="button"
               accessibilityLabel="إرسال النسخة الاحتياطية إلى البريد"
               style={({ pressed }) => [
-                styles.sendButton,
+                styles.sendButtonPressable,
                 pressed && styles.buttonPressed,
                 (sending || saving) && styles.buttonDisabled,
               ]}
             >
-              {sending ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.sendButtonText}>إرسال النسخة الاحتياطية إلى البريد</Text>
-              )}
+              <View pointerEvents="none" style={styles.sendButtonSurface}>
+                {sending ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.sendButtonText}>إرسال النسخة الاحتياطية إلى البريد</Text>
+                )}
+              </View>
             </Pressable>
           </View>
 
@@ -363,8 +367,9 @@ const styles = StyleSheet.create({
   sendBox: { marginTop: 4, marginBottom: 16, padding: 14, borderRadius: 16, borderWidth: 2, borderColor: palette.teal, backgroundColor: palette.tealSoft },
   sendTitle: { color: palette.navy, fontSize: 17, fontWeight: "900", textAlign: "right", marginBottom: 5 },
   sendText: { color: palette.muted, fontSize: 13, lineHeight: 21, textAlign: "right", marginBottom: 12 },
-  sendButton: { minHeight: 64, borderRadius: 16, backgroundColor: palette.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, borderWidth: 2, borderColor: "#066873" },
-  sendButtonText: { color: "#FFFFFF", fontSize: 17, fontWeight: "900", textAlign: "center" },
+  sendButtonPressable: { width: "100%", borderRadius: 16, overflow: "hidden" },
+  sendButtonSurface: { minHeight: 66, width: "100%", borderRadius: 16, backgroundColor: "#1267C4", alignItems: "center", justifyContent: "center", paddingHorizontal: 14, borderWidth: 2, borderColor: "#0A4F9F", elevation: 4 },
+  sendButtonText: { color: "#FFFFFF", fontSize: 18, fontWeight: "900", textAlign: "center" },
   switchRow: { flexDirection: "row-reverse", alignItems: "center", gap: 12, borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 14, marginTop: 3 },
   switchTextWrap: { flex: 1 },
   switchTitle: { color: palette.navy, fontSize: 15, fontWeight: "800", textAlign: "right" },

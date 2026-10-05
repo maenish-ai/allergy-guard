@@ -4,6 +4,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as MailComposer from "expo-mail-composer";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
+import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 import { pbkdf2Async } from "@noble/hashes/pbkdf2.js";
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -280,19 +281,43 @@ export async function prepareEncryptedDeviceBackup() {
 export async function emailEncryptedBackupNow() {
   const prefs = await loadEmailBackupPreferences();
   if (!isValidEmail(prefs.email)) throw new Error("احفظ البريد الإلكتروني أولًا من الإعدادات.");
-  if (!(await MailComposer.isAvailableAsync())) {
-    throw new Error("لا يوجد تطبيق بريد جاهز للإرسال على هذا الجهاز.");
+
+  // Always create the encrypted file first. Delivery can then fall back to the
+  // Android share sheet if a mail client refuses MailComposer attachments.
+  const { uri, lastPreparedAt } = await prepareEncryptedDeviceBackup();
+  const subject = `Allergy Guard encrypted backup - ${new Date().toISOString().slice(0, 10)}`;
+  const body =
+    "نسخة احتياطية مشفرة من تطبيق حارس الحساسية. احتفظ بكلمة مرور النسخة في مكان آمن؛ لا يمكن فتح الملف بدونها.";
+
+  let mailError: unknown;
+  try {
+    if (await MailComposer.isAvailableAsync()) {
+      await MailComposer.composeAsync({
+        recipients: [prefs.email],
+        subject,
+        body,
+        attachments: [uri],
+      });
+      return { uri, lastPreparedAt, deliveryMethod: "mail" as const, recipient: prefs.email };
+    }
+  } catch (error) {
+    mailError = error;
+    console.warn("MailComposer failed, using Android share fallback:", error);
   }
 
-  const { uri, lastPreparedAt } = await prepareEncryptedDeviceBackup();
-  await MailComposer.composeAsync({
-    recipients: [prefs.email],
-    subject: `Allergy Guard encrypted backup - ${new Date().toISOString().slice(0, 10)}`,
-    body:
-      "نسخة احتياطية مشفرة من تطبيق حارس الحساسية. احتفظ بكلمة مرور النسخة في مكان آمن؛ لا يمكن فتح الملف بدونها.",
-    attachments: [uri],
-  });
-  return { uri, lastPreparedAt };
+  // Reliable Android fallback: opens the native share chooser with the encrypted
+  // file. The user can select Gmail, Outlook, Yahoo, or any installed mail app.
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      dialogTitle: `إرسال النسخة الاحتياطية إلى ${prefs.email}`,
+      mimeType: "application/octet-stream",
+      UTI: "public.data",
+    });
+    return { uri, lastPreparedAt, deliveryMethod: "share" as const, recipient: prefs.email };
+  }
+
+  const detail = mailError instanceof Error ? ` (${mailError.message})` : "";
+  throw new Error(`تعذر فتح تطبيق البريد أو نافذة المشاركة على هذا الجهاز${detail}`);
 }
 
 
