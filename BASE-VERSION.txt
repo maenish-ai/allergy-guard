@@ -1,0 +1,5 @@
+Repository: maenish-ai/allergy-guard
+Base branch: main
+Base commit: 320e9967e15d5dd12467ef5515c0bbb23a3bc0d6
+Base version: 0.6.9
+Target version: 0.7.0

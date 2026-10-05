@@ -1,6 +1,6 @@
 {
   "name": "app-template",
-  "version": "0.6.9",
+  "version": "0.7.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -45,6 +45,7 @@
     "expo-image": "~3.0.11",
     "expo-keep-awake": "~15.0.8",
     "expo-linking": "~8.0.10",
+    "expo-mail-composer": "~15.0.8",
     "expo-notifications": "~0.32.15",
     "expo-print": "~15.0.8",
     "expo-router": "~6.0.19",
