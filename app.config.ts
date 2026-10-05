@@ -1,9 +1,8 @@
 import type { ExpoConfig } from "expo/config";
 
-const version = "0.7.0";
+const version = "0.7.1";
 const [major, minor, patch] = version.split(".").map(Number);
 const versionCode = major * 10000 + minor * 100 + patch;
-
 const config: ExpoConfig = {
   name: "حارس الحساسية",
   slug: "allergy-guard-android",
@@ -39,6 +38,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    "react-native-nitro-google-signin",
     [
       "expo-splash-screen",
       {

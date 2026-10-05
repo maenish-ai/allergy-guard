@@ -21,6 +21,9 @@ jobs:
       contents: write
     env:
       EXPO_PUBLIC_GITHUB_REPOSITORY: ${{ github.repository }}
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }}
+      EXPO_PUBLIC_MICROSOFT_OAUTH_CLIENT_ID: ${{ vars.EXPO_PUBLIC_MICROSOFT_OAUTH_CLIENT_ID }}
 
     steps:
       - name: Checkout
@@ -42,7 +45,8 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Verify required packages
-        run: node -e "require.resolve('expo-print/package.json'); console.log('expo-print is installed')"
+        run: |
+          node -e "require.resolve('expo-print/package.json'); require.resolve('expo-background-task/package.json'); require.resolve('expo-task-manager/package.json'); require.resolve('react-native-nitro-google-signin/package.json'); require.resolve('react-native-nitro-modules/package.json'); console.log('required packages are installed')"
 
       - name: Typecheck
         run: pnpm check

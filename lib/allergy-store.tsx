@@ -68,6 +68,7 @@ type StoreValue = {
   deleteRecord: (id: string) => void;
   saveProfile: (profile: Profile) => void;
   replaceData: (records: AllergyRecord[], profile: Profile) => void;
+  restoreSnapshot: (snapshot: unknown) => void;
 };
 
 const STORAGE_KEY_V2 = "allergy-guard-data-v2";
@@ -378,6 +379,23 @@ export function AllergyProvider({ children }: { children: React.ReactNode }) {
           ]);
           setActivePatientId(id);
         }
+      },
+      restoreSnapshot: (snapshot) => {
+        if (!snapshot || typeof snapshot !== "object") {
+          throw new Error("بيانات النسخة الاحتياطية غير صالحة.");
+        }
+        const source = snapshot as { patients?: unknown; activePatientId?: unknown };
+        const restored = normalizePatients(source.patients);
+        if (!Array.isArray(source.patients)) {
+          throw new Error("النسخة الاحتياطية لا تحتوي على قائمة مرضى صالحة.");
+        }
+        const requested = typeof source.activePatientId === "string" ? source.activePatientId : null;
+        setPatients(restored);
+        setActivePatientId(
+          requested && restored.some((patient) => patient.id === requested)
+            ? requested
+            : restored[0]?.id ?? null,
+        );
       },
     };
   }, [patients, activePatientId, activePatient, hydrated]);

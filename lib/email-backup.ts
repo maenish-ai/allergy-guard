@@ -14,26 +14,12 @@ export type EmailBackupPreferences = {
   provider: EmailProvider;
   email: string;
   dailyReminder: boolean;
+  autoBackup: boolean;
   lastPreparedAt?: string;
+  lastSentAt?: string;
 };
 
-const DATA_KEY = "allergy-guard-data-v2";
-const PREFS_KEY = "allergy-guard-email-backup-settings-v1";
-const PASSWORD_KEY = "allergy-guard-email-backup-password-v1";
-const REMINDER_ID_KEY = "allergy-guard-email-backup-reminder-id-v1";
-const BACKUP_DIR = `${FileSystem.documentDirectory ?? FileSystem.cacheDirectory}email-backups/`;
-const ITERATIONS = 210_000;
-const SALT_BYTES = 16;
-const NONCE_BYTES = 24;
-const KEY_BYTES = 32;
-
-const DEFAULT_PREFS: EmailBackupPreferences = {
-  provider: "gmail",
-  email: "",
-  dailyReminder: false,
-};
-
-type DeviceBackupPayload = {
+export type DeviceBackupPayload = {
   app: "allergy-guard";
   schemaVersion: 3;
   exportedAt: string;
@@ -51,7 +37,24 @@ type EncryptedDeviceBackup = {
   ciphertext: string;
 };
 
-function toBase64(bytes: Uint8Array): string {
+const DATA_KEY = "allergy-guard-data-v2";
+const PREFS_KEY = "allergy-guard-email-backup-settings-v1";
+const PASSWORD_KEY = "allergy-guard-email-backup-password-v1";
+const REMINDER_ID_KEY = "allergy-guard-email-backup-reminder-id-v1";
+const BACKUP_DIR = `${FileSystem.documentDirectory ?? FileSystem.cacheDirectory}email-backups/`;
+const ITERATIONS = 210_000;
+const SALT_BYTES = 16;
+const NONCE_BYTES = 24;
+const KEY_BYTES = 32;
+
+const DEFAULT_PREFS: EmailBackupPreferences = {
+  provider: "gmail",
+  email: "",
+  dailyReminder: false,
+  autoBackup: false,
+};
+
+export function bytesToBase64(bytes: Uint8Array): string {
   const BufferImpl = (globalThis as Record<string, any>).Buffer;
   if (BufferImpl) return BufferImpl.from(bytes).toString("base64");
   let binary = "";
@@ -59,7 +62,20 @@ function toBase64(bytes: Uint8Array): string {
   return globalThis.btoa(binary);
 }
 
-function isValidEmail(value: string) {
+export function base64ToBytes(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const BufferImpl = (globalThis as Record<string, any>).Buffer;
+  if (BufferImpl) return new Uint8Array(BufferImpl.from(padded, "base64"));
+  const binary = globalThis.atob(padded);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+export function stringToBase64(value: string): string {
+  return bytesToBase64(new TextEncoder().encode(value));
+}
+
+export function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
@@ -69,15 +85,19 @@ function assertPassword(password: string) {
   }
 }
 
-async function encryptDeviceBackup(payload: DeviceBackupPayload, password: string) {
-  assertPassword(password);
-  const salt = nacl.randomBytes(SALT_BYTES);
-  const nonce = nacl.randomBytes(NONCE_BYTES);
-  const key = await pbkdf2Async(sha256, password, salt, {
+async function deriveKey(password: string, salt: Uint8Array) {
+  return pbkdf2Async(sha256, password, salt, {
     c: ITERATIONS,
     dkLen: KEY_BYTES,
     asyncTick: 8,
   });
+}
+
+async function encryptDeviceBackup(payload: DeviceBackupPayload, password: string) {
+  assertPassword(password);
+  const salt = nacl.randomBytes(SALT_BYTES);
+  const nonce = nacl.randomBytes(NONCE_BYTES);
+  const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
   const ciphertext = nacl.secretbox(plaintext, nonce, key);
   const envelope: EncryptedDeviceBackup = {
@@ -86,11 +106,64 @@ async function encryptDeviceBackup(payload: DeviceBackupPayload, password: strin
     algorithm: "XSalsa20-Poly1305",
     kdf: "PBKDF2-SHA256",
     iterations: ITERATIONS,
-    salt: toBase64(salt),
-    nonce: toBase64(nonce),
-    ciphertext: toBase64(ciphertext),
+    salt: bytesToBase64(salt),
+    nonce: bytesToBase64(nonce),
+    ciphertext: bytesToBase64(ciphertext),
   };
   return JSON.stringify(envelope, null, 2);
+}
+
+function isEncryptedDeviceBackup(value: unknown): value is EncryptedDeviceBackup {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<EncryptedDeviceBackup>;
+  return (
+    candidate.app === "allergy-guard-device-backup" &&
+    candidate.schemaVersion === 1 &&
+    candidate.algorithm === "XSalsa20-Poly1305" &&
+    candidate.kdf === "PBKDF2-SHA256" &&
+    candidate.iterations === ITERATIONS &&
+    typeof candidate.salt === "string" &&
+    typeof candidate.nonce === "string" &&
+    typeof candidate.ciphertext === "string"
+  );
+}
+
+export async function decryptDeviceBackup(
+  raw: string,
+  passwordOverride?: string,
+): Promise<DeviceBackupPayload> {
+  const password = passwordOverride ?? (await SecureStore.getItemAsync(PASSWORD_KEY));
+  if (!password) throw new Error("لم يتم إعداد كلمة مرور النسخة الاحتياطية بعد.");
+  assertPassword(password);
+
+  let envelope: unknown;
+  try {
+    envelope = JSON.parse(raw);
+  } catch {
+    throw new Error("ملف النسخة الاحتياطية غير صالح.");
+  }
+  if (!isEncryptedDeviceBackup(envelope)) {
+    throw new Error("هذا الملف ليس نسخة مشفرة صالحة من حارس الحساسية.");
+  }
+
+  try {
+    const salt = base64ToBytes(envelope.salt);
+    const nonce = base64ToBytes(envelope.nonce);
+    const ciphertext = base64ToBytes(envelope.ciphertext);
+    if (salt.length !== SALT_BYTES || nonce.length !== NONCE_BYTES) {
+      throw new Error("invalid backup envelope");
+    }
+    const key = await deriveKey(password, salt);
+    const plaintext = nacl.secretbox.open(ciphertext, nonce, key);
+    if (!plaintext) throw new Error("authentication failed");
+    const payload = JSON.parse(new TextDecoder().decode(plaintext)) as Partial<DeviceBackupPayload>;
+    if (payload.app !== "allergy-guard" || payload.schemaVersion !== 3 || !("data" in payload)) {
+      throw new Error("invalid payload");
+    }
+    return payload as DeviceBackupPayload;
+  } catch {
+    throw new Error("تعذر فك النسخة. تحقق من كلمة مرور النسخة وسلامة الملف.");
+  }
 }
 
 function backupFilename() {
@@ -134,7 +207,9 @@ export async function loadEmailBackupPreferences(): Promise<EmailBackupPreferenc
       provider,
       email: typeof parsed.email === "string" ? parsed.email : "",
       dailyReminder: parsed.dailyReminder === true,
+      autoBackup: parsed.autoBackup === true,
       lastPreparedAt: typeof parsed.lastPreparedAt === "string" ? parsed.lastPreparedAt : undefined,
+      lastSentAt: typeof parsed.lastSentAt === "string" ? parsed.lastSentAt : undefined,
     };
   } catch {
     return DEFAULT_PREFS;
@@ -143,6 +218,10 @@ export async function loadEmailBackupPreferences(): Promise<EmailBackupPreferenc
 
 export async function hasBackupPassword() {
   return Boolean(await SecureStore.getItemAsync(PASSWORD_KEY));
+}
+
+export async function getBackupPassword() {
+  return SecureStore.getItemAsync(PASSWORD_KEY);
 }
 
 export async function saveEmailBackupPreferences(
@@ -160,6 +239,13 @@ export async function saveEmailBackupPreferences(
   const next = { ...preferences, email };
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next));
   return next;
+}
+
+export async function markBackupSent() {
+  const prefs = await loadEmailBackupPreferences();
+  const lastSentAt = new Date().toISOString();
+  await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({ ...prefs, lastSentAt }));
+  return lastSentAt;
 }
 
 export async function prepareEncryptedDeviceBackup() {
@@ -187,7 +273,7 @@ export async function prepareEncryptedDeviceBackup() {
   const prefs = await loadEmailBackupPreferences();
   const lastPreparedAt = new Date().toISOString();
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify({ ...prefs, lastPreparedAt }));
-  return { uri, lastPreparedAt };
+  return { uri, encrypted, lastPreparedAt, filename: uri.split("/").pop() ?? backupFilename() };
 }
 
 export async function emailEncryptedBackupNow() {
