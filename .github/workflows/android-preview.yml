@@ -43,7 +43,7 @@ jobs:
 
       - name: Verify required packages
         run: |
-          node -e "require.resolve('expo-print/package.json'); require.resolve('expo-mail-composer/package.json'); require.resolve('expo-sharing/package.json'); require.resolve('expo-notifications/package.json'); require.resolve('expo-secure-store/package.json'); console.log('required packages are installed')"
+          node -e "require.resolve('expo-print/package.json'); require.resolve('expo-crypto/package.json'); require.resolve('expo-mail-composer/package.json'); require.resolve('expo-sharing/package.json'); require.resolve('expo-notifications/package.json'); require.resolve('expo-secure-store/package.json'); console.log('required packages are installed')"
 
       - name: Verify simple email backup mode
         run: |
@@ -55,6 +55,16 @@ jobs:
             exit 1
           fi
           echo "Simple email-backup dependency guard passed."
+
+      - name: Verify Android-safe cryptographic RNG
+        run: |
+          set -euo pipefail
+          grep -RIn --include='*.ts' --include='*.tsx' 'expo-crypto' lib/email-backup.ts lib/backup-crypto.ts > /dev/null
+          if grep -RIn --include='*.ts' --include='*.tsx' 'nacl\.randomBytes' app components hooks lib; then
+            echo "ERROR: TweetNaCl PRNG usage found. Android must use expo-crypto native RNG."
+            exit 1
+          fi
+          echo "Native Android cryptographic RNG guard passed."
 
       - name: Typecheck
         run: pnpm check

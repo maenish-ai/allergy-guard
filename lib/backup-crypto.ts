@@ -1,3 +1,4 @@
+import * as Crypto from "expo-crypto";
 import { pbkdf2Async } from "@noble/hashes/pbkdf2.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import nacl from "tweetnacl";
@@ -70,8 +71,10 @@ export async function encryptBackupPayload(
   password: string,
 ): Promise<string> {
   assertPassword(password);
-  const salt = nacl.randomBytes(SALT_BYTES);
-  const nonce = nacl.randomBytes(NONCE_BYTES);
+  const [salt, nonce] = await Promise.all([
+    Crypto.getRandomBytesAsync(SALT_BYTES),
+    Crypto.getRandomBytesAsync(NONCE_BYTES),
+  ]);
   const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
   const ciphertext = nacl.secretbox(plaintext, nonce, key);

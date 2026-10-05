@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as DocumentPicker from "expo-document-picker";
+import * as Crypto from "expo-crypto";
 import * as MailComposer from "expo-mail-composer";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
@@ -97,8 +98,10 @@ async function deriveKey(password: string, salt: Uint8Array) {
 
 async function encryptDeviceBackup(payload: DeviceBackupPayload, password: string) {
   assertPassword(password);
-  const salt = nacl.randomBytes(SALT_BYTES);
-  const nonce = nacl.randomBytes(NONCE_BYTES);
+  const [salt, nonce] = await Promise.all([
+    Crypto.getRandomBytesAsync(SALT_BYTES),
+    Crypto.getRandomBytesAsync(NONCE_BYTES),
+  ]);
   const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
   const ciphertext = nacl.secretbox(plaintext, nonce, key);
