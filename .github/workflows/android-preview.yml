@@ -45,6 +45,17 @@ jobs:
         run: |
           node -e "require.resolve('expo-print/package.json'); require.resolve('expo-mail-composer/package.json'); require.resolve('expo-notifications/package.json'); require.resolve('expo-secure-store/package.json'); console.log('required packages are installed')"
 
+      - name: Verify simple email backup mode
+        run: |
+          set -euo pipefail
+          if grep -RIn --include='*.ts' --include='*.tsx' \
+            -E 'expo-background-task|expo-task-manager|react-native-nitro-google-signin|react-native-nitro-modules' \
+            app components hooks lib; then
+            echo "ERROR: legacy OAuth/background-mail dependency import found."
+            exit 1
+          fi
+          echo "Simple email-backup dependency guard passed."
+
       - name: Typecheck
         run: pnpm check
 
