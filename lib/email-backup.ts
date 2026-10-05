@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
+import * as DocumentPicker from "expo-document-picker";
 import * as MailComposer from "expo-mail-composer";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
@@ -14,7 +15,7 @@ export type EmailBackupPreferences = {
   provider: EmailProvider;
   email: string;
   dailyReminder: boolean;
-  autoBackup: boolean;
+  autoBackup?: boolean;
   lastPreparedAt?: string;
   lastSentAt?: string;
 };
@@ -292,6 +293,26 @@ export async function emailEncryptedBackupNow() {
     attachments: [uri],
   });
   return { uri, lastPreparedAt };
+}
+
+
+export async function pickEncryptedBackupFromFile(): Promise<{
+  payload: DeviceBackupPayload;
+  fileName: string;
+} | null> {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: ["application/json", "application/octet-stream", "*/*"],
+    copyToCacheDirectory: true,
+    multiple: false,
+  });
+  if (result.canceled || !result.assets[0]) return null;
+
+  const asset = result.assets[0];
+  const raw = await FileSystem.readAsStringAsync(asset.uri, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+  const payload = await decryptDeviceBackup(raw);
+  return { payload, fileName: asset.name || "AllergyGuard-Backup.agbackup" };
 }
 
 async function cancelExistingReminder() {
