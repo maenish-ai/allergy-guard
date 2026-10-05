@@ -224,6 +224,30 @@ export default function SettingsScreen() {
             هذه ليست كلمة مرور بريدك. هي فقط لحماية ملف النسخة، ولا يتم حفظ كلمة مرور Gmail أو Outlook أو Yahoo داخل التطبيق.
           </Text>
 
+          <View style={styles.sendBox}>
+            <Text style={styles.sendTitle}>إرسال نسخة احتياطية الآن</Text>
+            <Text style={styles.sendText}>
+              سيفتح تطبيق البريد على هاتفك، ويكون بريدك والملف المشفّر مرفقين وجاهزين. بعدها اضغط «إرسال» داخل البريد فقط.
+            </Text>
+            <Pressable
+              onPress={sendBackupNow}
+              disabled={sending || saving}
+              accessibilityRole="button"
+              accessibilityLabel="إرسال النسخة الاحتياطية إلى البريد"
+              style={({ pressed }) => [
+                styles.sendButton,
+                pressed && styles.buttonPressed,
+                (sending || saving) && styles.buttonDisabled,
+              ]}
+            >
+              {sending ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.sendButtonText}>إرسال النسخة الاحتياطية إلى البريد</Text>
+              )}
+            </Pressable>
+          </View>
+
           <View style={styles.switchRow}>
             <Switch
               value={dailyReminder}
@@ -260,26 +284,10 @@ export default function SettingsScreen() {
             )}
           </Pressable>
 
-          <Pressable
-            onPress={sendBackupNow}
-            disabled={sending || saving}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-              (sending || saving) && styles.buttonDisabled,
-            ]}
-          >
-            {sending ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>جهّز النسخة وافتح البريد</Text>
-            )}
-          </Pressable>
-
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>كيف تشتغل؟</Text>
+            <Text style={styles.infoTitle}>خطوتان فقط</Text>
             <Text style={styles.infoText}>
-              1) اضغط الزر أعلاه.  2) يفتح Gmail أو Outlook أو أي تطبيق بريد عندك.  3) الإيميل والمرفق يكونان جاهزين.  4) اضغط إرسال فقط.
+              1) اضغط «إرسال النسخة الاحتياطية إلى البريد».  2) عندما يفتح Gmail أو Outlook أو أي تطبيق بريد، اضغط «إرسال».
             </Text>
           </View>
         </View>
@@ -352,6 +360,11 @@ const styles = StyleSheet.create({
   label: { color: palette.navy, fontSize: 14, fontWeight: "800", textAlign: "right", marginBottom: 7, marginTop: 4 },
   input: { minHeight: 50, borderRadius: 13, borderWidth: 1, borderColor: palette.line, backgroundColor: "#FAFCFD", color: palette.navy, paddingHorizontal: 14, fontSize: 15, marginBottom: 13 },
   helper: { color: palette.muted, fontSize: 12, lineHeight: 19, textAlign: "right", marginTop: -5, marginBottom: 12 },
+  sendBox: { marginTop: 4, marginBottom: 16, padding: 14, borderRadius: 16, borderWidth: 2, borderColor: palette.teal, backgroundColor: palette.tealSoft },
+  sendTitle: { color: palette.navy, fontSize: 17, fontWeight: "900", textAlign: "right", marginBottom: 5 },
+  sendText: { color: palette.muted, fontSize: 13, lineHeight: 21, textAlign: "right", marginBottom: 12 },
+  sendButton: { minHeight: 64, borderRadius: 16, backgroundColor: palette.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, borderWidth: 2, borderColor: "#066873" },
+  sendButtonText: { color: "#FFFFFF", fontSize: 17, fontWeight: "900", textAlign: "center" },
   switchRow: { flexDirection: "row-reverse", alignItems: "center", gap: 12, borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 14, marginTop: 3 },
   switchTextWrap: { flex: 1 },
   switchTitle: { color: palette.navy, fontSize: 15, fontWeight: "800", textAlign: "right" },
