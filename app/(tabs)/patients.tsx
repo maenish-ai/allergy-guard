@@ -14,6 +14,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { DatePickerField, formatArabicDate } from "@/components/date-picker-field";
 import { FormActionBar } from "@/components/form-action-bar";
+import { PersistentSaveBanner } from "@/components/persistent-save-banner";
 import {
   emptyProfile,
   useAllergy,
@@ -221,17 +222,11 @@ export default function PatientsScreen() {
                 <Text style={styles.close}>×</Text>
               </Pressable>
             </View>
-            <View style={styles.alwaysVisibleSaveArea}>
-              <Pressable
-                onPress={save}
-                style={({ pressed }) => [styles.alwaysVisibleSaveButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ المريض"}
-              >
-                <Text style={styles.alwaysVisibleSaveText}>{editingId ? "حفظ التعديلات" : "حفظ المريض"}</Text>
-              </Pressable>
-            </View>
-            <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.form}>
+            <PersistentSaveBanner
+              label={editingId ? "حفظ التعديلات" : "حفظ المريض"}
+              onPress={save}
+            />
+            <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.form, { paddingBottom: 150 }]}>
               <Input label="الاسم الكامل *" value={draft.fullName} onChange={(v) => setDraft({ ...draft, fullName: v })} placeholder="مثال: أحمد محمد" />
               <View style={styles.twoColumns}>
                 <View style={styles.half}>
@@ -269,6 +264,7 @@ export default function PatientsScreen() {
               label={editingId ? "حفظ التعديلات" : "حفظ المريض"}
               onPress={save}
               bottomPadding={18}
+              sticky
             />
           </View>
         </View>
@@ -316,8 +312,8 @@ const styles = StyleSheet.create({
   sheet: { height: "92%", maxHeight: "92%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 18, overflow: "hidden", position: "relative" },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.line },
   sheetTitle: { flex: 1, color: C.navy, fontSize: 21, fontWeight: "900", textAlign: "center" },
-  headerSaveButton: { minWidth: 74, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
-  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  headerSaveButton: { minWidth: 86, minHeight: 46, borderRadius: 14, backgroundColor: C.teal, borderWidth: 2, borderColor: "#075D69", alignItems: "center", justifyContent: "center", paddingHorizontal: 16, elevation: 6, zIndex: 30 },
+  headerSaveButtonText: { color: "#FFF", fontSize: 18, fontWeight: "900" },
   alwaysVisibleSaveArea: { backgroundColor: C.card, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line },
   alwaysVisibleSaveButton: { minHeight: 58, borderRadius: 18, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, elevation: 3 },
   alwaysVisibleSaveText: { color: "#FFF", fontSize: 19, fontWeight: "900", textAlign: "center" },

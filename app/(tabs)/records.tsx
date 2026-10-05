@@ -18,6 +18,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { DatePickerField, formatArabicDate } from "@/components/date-picker-field";
 import { FormActionBar } from "@/components/form-action-bar";
+import { PersistentSaveBanner } from "@/components/persistent-save-banner";
 import {
   useAllergy,
   type AllergyRecord,
@@ -727,26 +728,16 @@ export default function RecordsScreen() {
                 <Text style={styles.close}>×</Text>
               </Pressable>
             </View>
-
-            <View style={styles.alwaysVisibleSaveArea}>
-              <Pressable
-                onPress={save}
-                disabled={saving}
-                style={({ pressed }) => [styles.alwaysVisibleSaveButton, pressed && !saving && styles.pressed, saving && styles.headerSaveDisabled]}
-                accessibilityRole="button"
-                accessibilityLabel={editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.alwaysVisibleSaveText}>{editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}</Text>
-                )}
-              </Pressable>
-            </View>
+            <PersistentSaveBanner
+              label={editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}
+              onPress={save}
+              busy={saving}
+              disabled={saving}
+            />
 
             <ScrollView
               style={styles.editorScroll}
-              contentContainerStyle={[styles.modalContent, styles.editorContent]}
+              contentContainerStyle={[styles.modalContent, styles.editorContent, { paddingBottom: 150 }]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
@@ -888,6 +879,7 @@ export default function RecordsScreen() {
               onPress={save}
               busy={saving}
               bottomPadding={18}
+              sticky
             />
           </View>
         </KeyboardAvoidingView>
@@ -1119,8 +1111,8 @@ const styles = StyleSheet.create({
   modalEditText: { color: "#FFF", fontSize: 17, fontWeight: "900" },
   modalDelete: { minWidth: 96, minHeight: 54, borderRadius: 15, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" },
   modalDeleteText: { color: C.red, fontSize: 17, fontWeight: "900" },
-  headerSaveButton: { minWidth: 74, minHeight: 42, borderRadius: 14, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
-  headerSaveButtonText: { color: "#FFF", fontSize: 16, fontWeight: "900" },
+  headerSaveButton: { minWidth: 86, minHeight: 46, borderRadius: 14, backgroundColor: C.teal, borderWidth: 2, borderColor: "#075D69", alignItems: "center", justifyContent: "center", paddingHorizontal: 16, elevation: 6, zIndex: 30 },
+  headerSaveButtonText: { color: "#FFF", fontSize: 18, fontWeight: "900" },
   alwaysVisibleSaveArea: { backgroundColor: C.card, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line },
   alwaysVisibleSaveButton: { minHeight: 58, borderRadius: 18, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, elevation: 3 },
   alwaysVisibleSaveText: { color: "#FFF", fontSize: 19, fontWeight: "900", textAlign: "center" },

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { FormActionBar } from "@/components/form-action-bar";
+import { PersistentSaveBanner } from "@/components/persistent-save-banner";
 import { useAllergy } from "@/lib/allergy-store";
 import {
   exportBackup,
@@ -324,6 +325,7 @@ export default function EmergencyScreen() {
                 <Text style={styles.formHeaderSaveText}>حفظ</Text>
               </Pressable>
             </View>
+            <PersistentSaveBanner label="حفظ التعديلات" onPress={save} />
             <TextInput
               value={draft.fullName}
               onChangeText={(value) => setDraft({ ...draft, fullName: value })}
