@@ -1,8 +1,48 @@
 import type { ExpoConfig } from "expo/config";
 
-const version = "0.7.1";
+const version = "0.7.2";
 const [major, minor, patch] = version.split(".").map(Number);
 const versionCode = major * 10000 + minor * 100 + patch;
+
+// The Nitro Google Sign-In Expo plugin validates iOS configuration even during
+// Android-only prebuilds. Only enable that plugin when an actual iOS reversed
+// client-id URL scheme is provided. Android uses React Native autolinking plus
+// the explicit Web Client ID passed at runtime, so it does not require the
+// config plugin for our Android build.
+const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME?.trim();
+
+const plugins: NonNullable<ExpoConfig["plugins"]> = [
+  "expo-router",
+];
+
+if (googleIosUrlScheme) {
+  plugins.push([
+    "react-native-nitro-google-signin",
+    { iosUrlScheme: googleIosUrlScheme },
+  ]);
+}
+
+plugins.push(
+  [
+    "expo-splash-screen",
+    {
+      image: "./assets/images/splash-icon.png",
+      imageWidth: 200,
+      resizeMode: "contain",
+      backgroundColor: "#F5FAFB",
+    },
+  ],
+  [
+    "expo-build-properties",
+    {
+      android: {
+        buildArchs: ["armeabi-v7a", "arm64-v8a"],
+        minSdkVersion: 24,
+      },
+    },
+  ],
+);
+
 const config: ExpoConfig = {
   name: "حارس الحساسية",
   slug: "allergy-guard-android",
@@ -36,28 +76,7 @@ const config: ExpoConfig = {
     output: "static",
     favicon: "./assets/images/favicon.png",
   },
-  plugins: [
-    "expo-router",
-    "react-native-nitro-google-signin",
-    [
-      "expo-splash-screen",
-      {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
-        resizeMode: "contain",
-        backgroundColor: "#F5FAFB",
-      },
-    ],
-    [
-      "expo-build-properties",
-      {
-        android: {
-          buildArchs: ["armeabi-v7a", "arm64-v8a"],
-          minSdkVersion: 24,
-        },
-      },
-    ],
-  ],
+  plugins,
   experiments: { typedRoutes: true, reactCompiler: false },
 };
 

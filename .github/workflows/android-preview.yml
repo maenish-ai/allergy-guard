@@ -23,6 +23,7 @@ jobs:
       EXPO_PUBLIC_GITHUB_REPOSITORY: ${{ github.repository }}
       EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
       EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID }}
+      EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME }}
       EXPO_PUBLIC_MICROSOFT_OAUTH_CLIENT_ID: ${{ vars.EXPO_PUBLIC_MICROSOFT_OAUTH_CLIENT_ID }}
 
     steps:
@@ -50,6 +51,9 @@ jobs:
 
       - name: Typecheck
         run: pnpm check
+
+      - name: Validate Expo config
+        run: pnpm exec expo config --type public > /dev/null
 
       - name: Generate Android project
         env:
