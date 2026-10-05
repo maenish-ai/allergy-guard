@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type PersistentSaveBannerProps = {
   label: string;
@@ -13,28 +13,30 @@ export function PersistentSaveBanner({
   busy = false,
   disabled = false,
 }: PersistentSaveBannerProps) {
+  const blocked = busy || disabled;
+
   return (
     <View style={styles.wrap}>
-      <Pressable
-        onPress={onPress}
-        disabled={busy || disabled}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        style={({ pressed }) => [
-          styles.button,
-          pressed && styles.pressed,
-          (busy || disabled) && styles.disabled,
-        ]}
-      >
-        {busy ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
-        ) : (
-          <View style={styles.content}>
-            <Text style={styles.icon}>💾</Text>
-            <Text style={styles.text}>{label}</Text>
-          </View>
-        )}
-      </Pressable>
+      <View style={[styles.buttonShell, blocked && styles.disabledShell]}>
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={blocked}
+          activeOpacity={0.72}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityHint="اضغط لحفظ البيانات"
+          style={styles.touchTarget}
+        >
+          {busy ? (
+            <ActivityIndicator color="#075D69" size="small" />
+          ) : (
+            <View style={styles.content}>
+              <Text style={styles.text}>{label}</Text>
+              <Text style={styles.helper}>اضغط هنا للحفظ</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -47,37 +49,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#D8E5EA",
     zIndex: 40,
-    elevation: 10,
   },
-  button: {
-    minHeight: 66,
+  buttonShell: {
     width: "100%",
+    minHeight: 72,
     borderRadius: 20,
-    backgroundColor: "#087E8B",
-    borderWidth: 2,
-    borderColor: "#075D69",
+    backgroundColor: "#DDF7F4",
+    borderWidth: 3,
+    borderColor: "#087E8B",
+    overflow: "hidden",
+  },
+  touchTarget: {
+    width: "100%",
+    minHeight: 72,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    shadowColor: "#173A57",
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 8,
+    paddingVertical: 10,
   },
   content: {
-    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
   },
-  icon: { fontSize: 22 },
   text: {
-    color: "#FFFFFF",
-    fontSize: 21,
+    color: "#075D69",
+    fontSize: 22,
     fontWeight: "900",
     textAlign: "center",
   },
-  pressed: { opacity: 0.88, transform: [{ scale: 0.995 }] },
-  disabled: { opacity: 0.55 },
+  helper: {
+    color: "#173A57",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 3,
+  },
+  disabledShell: {
+    opacity: 0.55,
+  },
 });

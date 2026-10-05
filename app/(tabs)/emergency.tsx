@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
@@ -316,14 +317,16 @@ export default function EmergencyScreen() {
           <View style={styles.form}>
             <View style={styles.formHeaderRow}>
               <Text style={styles.formTitle}>تعديل بيانات البطاقة</Text>
-              <Pressable
+              <TouchableOpacity
                 onPress={save}
-                style={({ pressed }) => [styles.formHeaderSave, pressed && { opacity: 0.82 }]}
+                activeOpacity={0.72}
+                style={styles.formHeaderSave}
                 accessibilityRole="button"
                 accessibilityLabel="حفظ التعديلات"
+                accessibilityHint="اضغط لحفظ بيانات بطاقة الطوارئ"
               >
                 <Text style={styles.formHeaderSaveText}>حفظ</Text>
-              </Pressable>
+              </TouchableOpacity>
             </View>
             <PersistentSaveBanner label="حفظ التعديلات" onPress={save} />
             <TextInput
@@ -638,8 +641,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   formHeaderRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  formHeaderSave: { minWidth: 72, minHeight: 42, borderRadius: 13, backgroundColor: "#169D90", alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
-  formHeaderSaveText: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
+  formHeaderSave: { minWidth: 88, minHeight: 46, borderRadius: 13, backgroundColor: "#DDF7F4", borderWidth: 3, borderColor: "#087E8B", alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
+  formHeaderSaveText: { color: "#075D69", fontSize: 18, fontWeight: "900" },
   save: {
     backgroundColor: palette.navy,
     borderRadius: 11,

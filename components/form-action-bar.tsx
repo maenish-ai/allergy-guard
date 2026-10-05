@@ -1,6 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-
-const SAVE_TEAL = "#169D90";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type FormActionBarProps = {
   label: string;
@@ -23,6 +21,8 @@ export function FormActionBar({
   bottomPadding = 18,
   sticky = false,
 }: FormActionBarProps) {
+  const blocked = busy || disabled;
+
   return (
     <View
       style={[
@@ -33,23 +33,23 @@ export function FormActionBar({
       ]}
     >
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
-      <Pressable
-        onPress={onPress}
-        disabled={busy || disabled}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        style={({ pressed }) => [
-          styles.button,
-          pressed && styles.pressed,
-          (busy || disabled) && styles.disabled,
-        ]}
-      >
-        {busy ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
-        ) : (
-          <Text style={styles.text}>{label}</Text>
-        )}
-      </Pressable>
+      <View style={[styles.buttonShell, blocked && styles.disabledShell]}>
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={blocked}
+          activeOpacity={0.72}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityHint="اضغط لحفظ البيانات"
+          style={styles.touchTarget}
+        >
+          {busy ? (
+            <ActivityIndicator color="#075D69" size="small" />
+          ) : (
+            <Text style={styles.text}>{label}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -84,25 +84,27 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginBottom: 8,
   },
-  button: {
+  buttonShell: {
+    width: "100%",
     minHeight: 70,
-    borderRadius: 24,
-    backgroundColor: SAVE_TEAL,
+    borderRadius: 22,
+    backgroundColor: "#DDF7F4",
+    borderWidth: 3,
+    borderColor: "#087E8B",
+    overflow: "hidden",
+  },
+  touchTarget: {
+    width: "100%",
+    minHeight: 70,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    shadowColor: "#0D6F67",
-    shadowOpacity: 0.12,
-    shadowRadius: 9,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 4,
   },
   text: {
-    color: "#FFFFFF",
-    fontSize: 21,
+    color: "#075D69",
+    fontSize: 22,
     fontWeight: "900",
     textAlign: "center",
   },
-  pressed: { opacity: 0.88, transform: [{ scale: 0.995 }] },
-  disabled: { opacity: 0.5 },
+  disabledShell: { opacity: 0.5 },
 });

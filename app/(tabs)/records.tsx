@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   ToastAndroid,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
@@ -709,15 +710,17 @@ export default function RecordsScreen() {
         >
           <View style={styles.editorSheet}>
             <View style={styles.modalHeader}>
-              <Pressable
+              <TouchableOpacity
                 onPress={save}
                 disabled={saving}
-                style={({ pressed }) => [styles.headerSaveButton, pressed && !saving && styles.pressed, saving && styles.headerSaveDisabled]}
+                activeOpacity={0.72}
+                style={[styles.headerSaveButton, saving && styles.headerSaveDisabled]}
                 accessibilityRole="button"
                 accessibilityLabel={editingId ? "حفظ التعديلات" : saveActionLabelFor(kind)}
+                accessibilityHint="اضغط لحفظ السجل"
               >
                 <Text style={styles.headerSaveButtonText}>{saving ? "..." : "حفظ"}</Text>
-              </Pressable>
+              </TouchableOpacity>
               <View style={styles.editorHeaderText}>
                 <Text style={styles.modalTitle}>
                   {editingId ? `تعديل ${selectedOption.label}` : `إضافة ${selectedOption.label}`}
@@ -1111,8 +1114,8 @@ const styles = StyleSheet.create({
   modalEditText: { color: "#FFF", fontSize: 17, fontWeight: "900" },
   modalDelete: { minWidth: 96, minHeight: 54, borderRadius: 15, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" },
   modalDeleteText: { color: C.red, fontSize: 17, fontWeight: "900" },
-  headerSaveButton: { minWidth: 86, minHeight: 46, borderRadius: 14, backgroundColor: C.teal, borderWidth: 2, borderColor: "#075D69", alignItems: "center", justifyContent: "center", paddingHorizontal: 16, elevation: 6, zIndex: 30 },
-  headerSaveButtonText: { color: "#FFF", fontSize: 18, fontWeight: "900" },
+  headerSaveButton: { minWidth: 92, minHeight: 48, borderRadius: 14, backgroundColor: "#DDF7F4", borderWidth: 3, borderColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, zIndex: 30 },
+  headerSaveButtonText: { color: "#075D69", fontSize: 19, fontWeight: "900" },
   alwaysVisibleSaveArea: { backgroundColor: C.card, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line },
   alwaysVisibleSaveButton: { minHeight: 58, borderRadius: 18, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, elevation: 3 },
   alwaysVisibleSaveText: { color: "#FFF", fontSize: 19, fontWeight: "900", textAlign: "center" },

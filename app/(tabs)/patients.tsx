@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
@@ -209,14 +210,16 @@ export default function PatientsScreen() {
         <View style={[styles.backdrop, { paddingBottom: systemBottomClearance }]}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <Pressable
+              <TouchableOpacity
                 onPress={save}
-                style={({ pressed }) => [styles.headerSaveButton, pressed && styles.pressed]}
+                activeOpacity={0.72}
+                style={styles.headerSaveButton}
                 accessibilityRole="button"
                 accessibilityLabel={editingId ? "حفظ التعديلات" : "حفظ المريض"}
+                accessibilityHint="اضغط لحفظ بيانات المريض"
               >
                 <Text style={styles.headerSaveButtonText}>حفظ</Text>
-              </Pressable>
+              </TouchableOpacity>
               <Text style={styles.sheetTitle}>{editingId ? "تعديل بيانات المريض" : "إضافة مريض جديد"}</Text>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={12}>
                 <Text style={styles.close}>×</Text>
@@ -312,8 +315,8 @@ const styles = StyleSheet.create({
   sheet: { height: "92%", maxHeight: "92%", backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 18, overflow: "hidden", position: "relative" },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.line },
   sheetTitle: { flex: 1, color: C.navy, fontSize: 21, fontWeight: "900", textAlign: "center" },
-  headerSaveButton: { minWidth: 86, minHeight: 46, borderRadius: 14, backgroundColor: C.teal, borderWidth: 2, borderColor: "#075D69", alignItems: "center", justifyContent: "center", paddingHorizontal: 16, elevation: 6, zIndex: 30 },
-  headerSaveButtonText: { color: "#FFF", fontSize: 18, fontWeight: "900" },
+  headerSaveButton: { minWidth: 92, minHeight: 48, borderRadius: 14, backgroundColor: "#DDF7F4", borderWidth: 3, borderColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, zIndex: 30 },
+  headerSaveButtonText: { color: "#075D69", fontSize: 19, fontWeight: "900" },
   alwaysVisibleSaveArea: { backgroundColor: C.card, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.line },
   alwaysVisibleSaveButton: { minHeight: 58, borderRadius: 18, backgroundColor: C.teal, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, elevation: 3 },
   alwaysVisibleSaveText: { color: "#FFF", fontSize: 19, fontWeight: "900", textAlign: "center" },
