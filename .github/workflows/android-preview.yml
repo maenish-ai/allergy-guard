@@ -8,10 +8,6 @@ on:
     tags:
       - "v*"
 
-concurrency:
-  group: android-build-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build-android:
     name: Build Android APK + AAB
@@ -44,6 +40,14 @@ jobs:
       - name: Verify required packages
         run: |
           node -e "require.resolve('expo-print/package.json'); require.resolve('expo-crypto/package.json'); require.resolve('expo-mail-composer/package.json'); require.resolve('expo-sharing/package.json'); require.resolve('expo-notifications/package.json'); require.resolve('expo-secure-store/package.json'); console.log('required packages are installed')"
+
+      - name: Verify package and app versions
+        run: |
+          set -euo pipefail
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          APP_VERSION=$(node -e "const fs=require('fs');const s=fs.readFileSync('app.config.ts','utf8');const m=s.match(/const version = \"([^\"]+)\"/);if(!m)process.exit(2);process.stdout.write(m[1]);")
+          test "$PKG_VERSION" = "$APP_VERSION" || { echo "ERROR: package.json version ($PKG_VERSION) != app.config.ts version ($APP_VERSION)"; exit 1; }
+          echo "Version guard passed: $APP_VERSION"
 
       - name: Verify simple email backup mode
         run: |
