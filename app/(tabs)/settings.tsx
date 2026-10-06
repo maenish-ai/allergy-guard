@@ -64,6 +64,7 @@ export default function SettingsScreen() {
   const [lastPreparedAt, setLastPreparedAt] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState("");
   const [restoring, setRestoring] = useState(false);
   const version = Constants.expoConfig?.version ?? "غير معروف";
 
@@ -113,10 +114,16 @@ export default function SettingsScreen() {
 
   const sendBackupNow = async () => {
     if (sending || saving) return;
-    const saved = await persistBackupSettings(false);
-    if (!saved) return;
     setSending(true);
+    setSendingMessage(password.trim() ? "جاري إعداد رمز الحماية لأول مرة…" : "جاري إنشاء النسخة…");
+    let progressTimer: ReturnType<typeof setTimeout> | undefined;
     try {
+      const saved = await persistBackupSettings(false);
+      if (!saved) return;
+      setSendingMessage("جاري تشفير النسخة…");
+      progressTimer = setTimeout(() => {
+        setSendingMessage("جاري فتح تطبيق البريد…");
+      }, 2000);
       const result = await emailEncryptedBackupNow();
       setLastPreparedAt(result.lastPreparedAt);
       Alert.alert(
@@ -128,6 +135,8 @@ export default function SettingsScreen() {
     } catch (error) {
       Alert.alert("تعذر تجهيز النسخة", error instanceof Error ? error.message : "حدث خطأ غير متوقع.");
     } finally {
+      if (progressTimer) clearTimeout(progressTimer);
+      setSendingMessage("");
       setSending(false);
     }
   };
@@ -212,18 +221,18 @@ export default function SettingsScreen() {
             style={styles.input}
           />
 
-          <Text style={styles.label}>كلمة مرور تشفير النسخة</Text>
+          <Text style={styles.label}>رمز حماية النسخة الاحتياطية — تنشئه أنت</Text>
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder={passwordAlreadySet ? "اتركها فارغة للإبقاء على الحالية" : "8 أحرف على الأقل"}
+            placeholder={passwordAlreadySet ? "اتركه فارغًا للإبقاء على الرمز الحالي" : "اكتب رمزًا تتذكره — 8 أحرف على الأقل (ويُفضّل 12+)"}
             placeholderTextColor="#99A7B0"
             secureTextEntry
             textAlign="right"
             style={styles.input}
           />
           <Text style={styles.helper}>
-            هذه ليست كلمة مرور بريدك. هي فقط لحماية ملف النسخة، ولا يتم حفظ كلمة مرور Gmail أو Outlook أو Yahoo داخل التطبيق.
+            هذا الرمز ليس كلمة مرور Gmail أو البريد. أنت تنشئه داخل التطبيق لحماية ملف النسخة فقط. احتفظ به لأنك ستحتاجه عند استرجاع النسخة على جهاز آخر. أول إعداد للحماية قد يستغرق بضع ثوانٍ، وبعدها تصبح عملية تجهيز النسخ أسرع.
           </Text>
 
           <View style={styles.sendBox}>
@@ -244,7 +253,10 @@ export default function SettingsScreen() {
             >
               <View pointerEvents="none" style={styles.sendButtonSurface}>
                 {sending ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <View style={styles.sendingContent}>
+                    <ActivityIndicator color="#FFFFFF" />
+                    <Text style={styles.sendingText}>{sendingMessage || "جاري تجهيز النسخة…"}</Text>
+                  </View>
                 ) : (
                   <Text style={styles.sendButtonText}>إرسال النسخة الاحتياطية إلى البريد</Text>
                 )}
@@ -370,6 +382,8 @@ const styles = StyleSheet.create({
   sendButtonPressable: { width: "100%", borderRadius: 16, overflow: "hidden" },
   sendButtonSurface: { minHeight: 66, width: "100%", borderRadius: 16, backgroundColor: "#1267C4", alignItems: "center", justifyContent: "center", paddingHorizontal: 14, borderWidth: 2, borderColor: "#0A4F9F", elevation: 4 },
   sendButtonText: { color: "#FFFFFF", fontSize: 18, fontWeight: "900", textAlign: "center" },
+  sendingContent: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 10 },
+  sendingText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800", textAlign: "center" },
   switchRow: { flexDirection: "row-reverse", alignItems: "center", gap: 12, borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 14, marginTop: 3 },
   switchTextWrap: { flex: 1 },
   switchTitle: { color: palette.navy, fontSize: 15, fontWeight: "800", textAlign: "right" },

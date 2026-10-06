@@ -40,12 +40,21 @@ type EncryptedDeviceBackup = {
   ciphertext: string;
 };
 
+type StoredDerivedKey = {
+  iterations: number;
+  salt: string;
+  key: string;
+};
+
 const DATA_KEY = "allergy-guard-data-v2";
 const PREFS_KEY = "allergy-guard-email-backup-settings-v1";
 const PASSWORD_KEY = "allergy-guard-email-backup-password-v1";
+const KEY_CACHE_KEY = "allergy-guard-email-backup-derived-key-v1";
 const REMINDER_ID_KEY = "allergy-guard-email-backup-reminder-id-v1";
 const BACKUP_DIR = `${FileSystem.documentDirectory ?? FileSystem.cacheDirectory}email-backups/`;
-const ITERATIONS = 210_000;
+const CURRENT_ITERATIONS = 20_000;
+const MIN_SUPPORTED_ITERATIONS = 10_000;
+const MAX_SUPPORTED_ITERATIONS = 500_000;
 const SALT_BYTES = 16;
 const NONCE_BYTES = 24;
 const KEY_BYTES = 32;
@@ -88,21 +97,53 @@ function assertPassword(password: string) {
   }
 }
 
-async function deriveKey(password: string, salt: Uint8Array) {
+async function deriveKey(password: string, salt: Uint8Array, iterations: number) {
   return pbkdf2Async(sha256, password, salt, {
-    c: ITERATIONS,
+    c: iterations,
     dkLen: KEY_BYTES,
-    asyncTick: 8,
+    asyncTick: 24,
   });
+}
+
+async function loadDerivedKeyCache(): Promise<{ salt: Uint8Array; key: Uint8Array } | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(KEY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredDerivedKey>;
+    if (parsed.iterations !== CURRENT_ITERATIONS || typeof parsed.salt !== "string" || typeof parsed.key !== "string") {
+      return null;
+    }
+    const salt = base64ToBytes(parsed.salt);
+    const key = base64ToBytes(parsed.key);
+    if (salt.length !== SALT_BYTES || key.length !== KEY_BYTES) return null;
+    return { salt, key };
+  } catch {
+    return null;
+  }
+}
+
+async function createDerivedKeyCache(password: string) {
+  const salt = await Crypto.getRandomBytesAsync(SALT_BYTES);
+  const key = await deriveKey(password, salt, CURRENT_ITERATIONS);
+  const stored: StoredDerivedKey = {
+    iterations: CURRENT_ITERATIONS,
+    salt: bytesToBase64(salt),
+    key: bytesToBase64(key),
+  };
+  await SecureStore.setItemAsync(KEY_CACHE_KEY, JSON.stringify(stored));
+  return { salt, key };
+}
+
+async function getOrCreateDerivedKey(password: string) {
+  return (await loadDerivedKeyCache()) ?? createDerivedKeyCache(password);
 }
 
 async function encryptDeviceBackup(payload: DeviceBackupPayload, password: string) {
   assertPassword(password);
-  const [salt, nonce] = await Promise.all([
-    Crypto.getRandomBytesAsync(SALT_BYTES),
+  const [{ salt, key }, nonce] = await Promise.all([
+    getOrCreateDerivedKey(password),
     Crypto.getRandomBytesAsync(NONCE_BYTES),
   ]);
-  const key = await deriveKey(password, salt);
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
   const ciphertext = nacl.secretbox(plaintext, nonce, key);
   const envelope: EncryptedDeviceBackup = {
@@ -110,7 +151,7 @@ async function encryptDeviceBackup(payload: DeviceBackupPayload, password: strin
     schemaVersion: 1,
     algorithm: "XSalsa20-Poly1305",
     kdf: "PBKDF2-SHA256",
-    iterations: ITERATIONS,
+    iterations: CURRENT_ITERATIONS,
     salt: bytesToBase64(salt),
     nonce: bytesToBase64(nonce),
     ciphertext: bytesToBase64(ciphertext),
@@ -126,7 +167,10 @@ function isEncryptedDeviceBackup(value: unknown): value is EncryptedDeviceBackup
     candidate.schemaVersion === 1 &&
     candidate.algorithm === "XSalsa20-Poly1305" &&
     candidate.kdf === "PBKDF2-SHA256" &&
-    candidate.iterations === ITERATIONS &&
+    typeof candidate.iterations === "number" &&
+    Number.isInteger(candidate.iterations) &&
+    candidate.iterations >= MIN_SUPPORTED_ITERATIONS &&
+    candidate.iterations <= MAX_SUPPORTED_ITERATIONS &&
     typeof candidate.salt === "string" &&
     typeof candidate.nonce === "string" &&
     typeof candidate.ciphertext === "string"
@@ -158,7 +202,13 @@ export async function decryptDeviceBackup(
     if (salt.length !== SALT_BYTES || nonce.length !== NONCE_BYTES) {
       throw new Error("invalid backup envelope");
     }
-    const key = await deriveKey(password, salt);
+    let key: Uint8Array;
+    const cached = envelope.iterations === CURRENT_ITERATIONS ? await loadDerivedKeyCache() : null;
+    if (cached && bytesToBase64(cached.salt) === envelope.salt) {
+      key = cached.key;
+    } else {
+      key = await deriveKey(password, salt, envelope.iterations);
+    }
     const plaintext = nacl.secretbox.open(ciphertext, nonce, key);
     if (!plaintext) throw new Error("authentication failed");
     const payload = JSON.parse(new TextDecoder().decode(plaintext)) as Partial<DeviceBackupPayload>;
@@ -238,6 +288,7 @@ export async function saveEmailBackupPreferences(
   if (password?.trim()) {
     assertPassword(password);
     await SecureStore.setItemAsync(PASSWORD_KEY, password);
+    await createDerivedKeyCache(password);
   } else if (!(await hasBackupPassword())) {
     throw new Error("ضع كلمة مرور للنسخة الاحتياطية من 8 أحرف على الأقل.");
   }
@@ -281,6 +332,20 @@ export async function prepareEncryptedDeviceBackup() {
   return { uri, encrypted, lastPreparedAt, filename: uri.split("/").pop() ?? backupFilename() };
 }
 
+async function withTimeout<T>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), milliseconds);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function emailEncryptedBackupNow() {
   const prefs = await loadEmailBackupPreferences();
   if (!isValidEmail(prefs.email)) throw new Error("احفظ البريد الإلكتروني أولًا من الإعدادات.");
@@ -290,11 +355,16 @@ export async function emailEncryptedBackupNow() {
   const { uri, lastPreparedAt } = await prepareEncryptedDeviceBackup();
   const subject = `Allergy Guard encrypted backup - ${new Date().toISOString().slice(0, 10)}`;
   const body =
-    "نسخة احتياطية مشفرة من تطبيق حارس الحساسية. احتفظ بكلمة مرور النسخة في مكان آمن؛ لا يمكن فتح الملف بدونها.";
+    "نسخة احتياطية مشفرة من تطبيق حارس الحساسية. احتفظ برمز حماية النسخة في مكان آمن؛ لا يمكن فتح الملف بدونه.";
 
   let mailError: unknown;
   try {
-    if (await MailComposer.isAvailableAsync()) {
+    const mailAvailable = await withTimeout(
+      MailComposer.isAvailableAsync(),
+      3_000,
+      "تعذر التحقق من تطبيق البريد بسرعة.",
+    );
+    if (mailAvailable) {
       await MailComposer.composeAsync({
         recipients: [prefs.email],
         subject,

@@ -1,7 +1,11 @@
-# Email OAuth setup — no longer required
+# Email backup setup
 
-Starting with Allergy Guard v0.7.3, email backup no longer uses Gmail or Microsoft OAuth.
+This project no longer requires Gmail/Outlook OAuth setup for the simple email-backup flow.
 
-The application creates an encrypted `.agbackup` file and opens the mail application already configured on the phone with the recipient, subject, body, and attachment prepared. The user only presses **Send**.
+The app creates an encrypted `.agbackup` file locally and opens the email UI installed on the phone. No Google Cloud, Microsoft Entra, OAuth client ID, or email password is required.
 
-Therefore there is no Google Cloud project, Microsoft Entra app, OAuth client ID, email password, or paid server required for the current backup flow.
+The user enters:
+1. The destination email address.
+2. A backup protection code created by the user (not the email password).
+
+The user then presses the send-backup button and completes the final Send action in the email app.
